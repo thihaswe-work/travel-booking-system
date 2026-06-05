@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  customer
+  travel_agent
+  admin
+
+  @@map("user_role")
+}
+
+enum SeatClass {
+  economy
+  business
+  first
+
+  @@map("seat_class")
+}
+
+enum BookingType {
+  flight
+  hotel
+  tour
+  package
+
+  @@map("booking_type")
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+  completed
+
+  @@map("booking_status")
+}
+
+enum ItemType {
+  flight
+  hotel
+  tour
+
+  @@map("item_type")
+}
+
+enum PaymentMethod {
+  card
+  cash_on_arrival
+
+  @@map("payment_method")
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+
+  @@map("payment_status")
+}
+
+enum NotificationType {
+  booking_confirmation
+  cancellation
+  payment_receipt
+  reminder
+  promotional
+
+  @@map("notification_type")
+}
+
+enum NotificationChannel {
+  email
+  sms
+  in_app
+
+  @@map("notification_channel")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole @default(customer)
+  firstName    String   @map("first_name") @db.VarChar(100)
+  lastName     String   @map("last_name") @db.VarChar(100)
+  phone        String?  @db.VarChar(20)
+  preferences  Json?
+  isActive     Boolean  @default(true) @map("is_active")
+  refreshToken String?  @map("refresh_token") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  bookings      Booking[]
+  notifications Notification[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Destination {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(255)
+  country     String   @db.VarChar(255)
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  flights Flight[]
+  hotels  Hotel[]
+  tours   Tour[]
+
+  @@index([name])
+  @@index([country])
+  @@map("destinations")
+}
+
+model Flight {
+  id             String    @id @default(uuid()) @db.Uuid
+  destinationId  String    @map("destination_id") @db.Uuid
+  airline        String    @db.VarChar(255)
+  flightNumber   String    @map("flight_number") @db.VarChar(50)
+  departureCity  String    @map("departure_city") @db.VarChar(255)
+  arrivalCity    String    @map("arrival_city") @db.VarChar(255)
+  departureTime  DateTime  @map("departure_time")
+  arrivalTime    DateTime  @map("arrival_time")
+  durationMin    Int       @map("duration_min")
+  seatClass      SeatClass @default(economy) @map("seat_class")
+  basePrice      Decimal   @map("base_price") @db.Decimal(10, 2)
+  availableSeats Int       @map("available_seats")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  destination Destination @relation(fields: [destinationId], references: [id])
+
+  @@index([destinationId])
+  @@index([flightNumber])
+  @@index([departureCity, arrivalCity])
+  @@map("flights")
+}
+
+model Hotel {
+  id            String   @id @default(uuid()) @db.Uuid
+  destinationId String   @map("destination_id") @db.Uuid
+  name          String   @db.VarChar(255)
+  address       String?  @db.Text
+  starRating    Int      @map("star_rating")
+  description   String?  @db.Text
+  imageUrl      String?  @map("image_url") @db.VarChar(500)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  destination Destination @relation(fields: [destinationId], references: [id])
+  rooms       HotelRoom[]
+
+  @@index([destinationId])
+  @@map("hotels")
+}
+
+model HotelRoom {
+  id             String   @id @default(uuid()) @db.Uuid
+  hotelId        String   @map("hotel_id") @db.Uuid
+  roomType       String   @map("room_type") @db.VarChar(100)
+  pricePerNight  Decimal  @map("price_per_night") @db.Decimal(10, 2)
+  maxGuests      Int      @map("max_guests")
+  totalRooms     Int      @map("total_rooms")
+  availableRooms Int      @map("available_rooms")
+  amenities      Json?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@map("hotel_rooms")
+}
+
+model Tour {
+  id              String   @id @default(uuid()) @db.Uuid
+  destinationId   String   @map("destination_id") @db.Uuid
+  name            String   @db.VarChar(255)
+  description     String?  @db.Text
+  durationDays    Int      @map("duration_days")
+  pricePerPerson  Decimal  @map("price_per_person") @db.Decimal(10, 2)
+  maxCapacity     Int      @map("max_capacity")
+  availableSlots  Int      @map("available_slots")
+  includes        Json?
+  itinerary       Json?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  destination Destination @relation(fields: [destinationId], references: [id])
+
+  @@index([destinationId])
+  @@map("tours")
+}
+
+model Booking {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  bookingType BookingType   @map("booking_type")
+  status      BookingStatus @default(pending)
+  totalAmount Decimal       @map("total_amount") @db.Decimal(10, 2)
+  currency    String        @default("USD") @db.VarChar(3)
+  referenceId String        @unique @map("reference_id") @db.VarChar(50)
+  notes       String?       @db.Text
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  user      User             @relation(fields: [userId], references: [id])
+  details   BookingDetail[]
+  payments  Payment[]
+
+  @@index([userId])
+  @@index([referenceId])
+  @@index([status])
+  @@index([bookingType])
+  @@map("bookings")
+}
+
+model BookingDetail {
+  id          String   @id @default(uuid()) @db.Uuid
+  bookingId   String   @map("booking_id") @db.Uuid
+  itemType    ItemType @map("item_type")
+  itemId      String   @map("item_id") @db.VarChar(255)
+  checkInDate DateTime? @map("check_in_date")
+  checkOutDate DateTime? @map("check_out_date")
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  subtotal    Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  booking    Booking            @relation(fields: [bookingId], references: [id])
+  passengers BookingPassenger[]
+
+  @@index([bookingId])
+  @@index([itemType, itemId])
+  @@map("booking_details")
+}
+
+model BookingPassenger {
+  id             String   @id @default(uuid()) @db.Uuid
+  bookingDetailId String  @map("booking_detail_id") @db.Uuid
+  firstName      String   @map("first_name") @db.VarChar(100)
+  lastName       String   @map("last_name") @db.VarChar(100)
+  documentType   String?  @map("document_type") @db.VarChar(50)
+  documentNumber String?  @map("document_number") @db.VarChar(50)
+  seatClass      String?  @map("seat_class") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  bookingDetail BookingDetail @relation(fields: [bookingDetailId], references: [id])
+
+  @@index([bookingDetailId])
+  @@map("booking_passengers")
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  bookingId      String        @map("booking_id") @db.Uuid
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("USD") @db.VarChar(3)
+  paymentMethod  PaymentMethod @map("payment_method")
+  paymentStatus  PaymentStatus @default(pending) @map("payment_status")
+  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(50)
+  paidAt         DateTime?     @map("paid_at")
+  gatewayResponse Json?        @map("gateway_response")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@index([invoiceNumber])
+  @@index([paymentStatus])
+  @@map("payments")
+}
+
+model Notification {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @map("user_id") @db.Uuid
+  type      NotificationType
+  channel   NotificationChannel
+  subject   String             @db.VarChar(255)
+  message   String             @db.Text
+  isRead    Boolean            @default(false) @map("is_read")
+  sentAt    DateTime           @default(now()) @map("sent_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@map("notifications")
+}
+
+model AnalyticsDaily {
+  id              String   @id @default(uuid()) @db.Uuid
+  date            DateTime @unique
+  totalBookings   Int      @map("total_bookings")
+  totalRevenue    Decimal  @map("total_revenue") @db.Decimal(14, 2)
+  totalUsers      Int      @map("total_users")
+  popularDestination String? @map("popular_destination") @db.VarChar(255)
+  bookingsByType  Json?    @map("bookings_by_type")
+  revenueByType   Json?    @map("revenue_by_type")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("analytics_daily")
+}

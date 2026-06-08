@@ -122,7 +122,7 @@ export default function ManageForm({
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </label>
             <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-900"
               rows={4}
               placeholder={field.placeholder}
               value={value}
@@ -138,7 +138,7 @@ export default function ManageForm({
               {field.label} (JSON)
             </label>
             <textarea
-              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-900"
               rows={4}
               placeholder='["item1", "item2"]'
               value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}

@@ -33,7 +33,7 @@ export default function ProfilePage() {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        phone: user.phone,
+        phone: user.phone || '',
       });
     }
   }, [user, isAuthenticated, authLoading, router]);
@@ -42,7 +42,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await patch<User>('/auth/me', form);
+      await patch<import('@/types').ApiResponse<User>>('/auth/me', form);
       toast.success('Profile updated');
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

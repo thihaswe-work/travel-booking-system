@@ -9,7 +9,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import Pagination from '@/components/ui/Pagination';
-import type { Booking, PaginatedResponse } from '@/types';
+import type { Booking, PaginatedApiResponse } from '@/types';
 import { BookOpen, Eye, Filter } from 'lucide-react';
 
 const statusTabs = [
@@ -21,7 +21,7 @@ const statusTabs = [
 
 export default function MyBookingsPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const [bookings, setBookings] = useState<PaginatedResponse<Booking> | null>(null);
+  const [bookings, setBookings] = useState<PaginatedApiResponse<Booking> | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -31,7 +31,7 @@ export default function MyBookingsPage() {
     try {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
-      const data = await get<PaginatedResponse<Booking>>('/bookings/my-bookings', params);
+      const data = await get<PaginatedApiResponse<Booking>>('/bookings/my-bookings', params);
       setBookings(data);
     } catch {
       setBookings(null);
@@ -114,12 +114,12 @@ export default function MyBookingsPage() {
                     </span>
                   </div>
                   <p className="font-semibold text-gray-900">
-                    {booking.flight
-                      ? `${booking.flight.departureCity} → ${booking.flight.arrivalCity}`
-                      : booking.hotel
-                      ? booking.hotel.name
-                      : booking.tour
-                      ? booking.tour.name
+                    {booking.details?.[0]?.itemType === 'flight'
+                      ? 'Flight Booking'
+                      : booking.details?.[0]?.itemType === 'hotel'
+                      ? 'Hotel Booking'
+                      : booking.details?.[0]?.itemType === 'tour'
+                      ? 'Tour Booking'
                       : 'Booking'}
                   </p>
                 </div>
@@ -146,10 +146,10 @@ export default function MyBookingsPage() {
               </div>
             </div>
           ))}
-          {bookings.totalPages > 1 && (
+          {bookings.pagination.totalPages > 1 && (
             <Pagination
-              page={bookings.page}
-              totalPages={bookings.totalPages}
+              page={bookings.pagination.page}
+              totalPages={bookings.pagination.totalPages}
               onPageChange={setPage}
             />
           )}

@@ -41,7 +41,7 @@ export default function HotelCard({ hotel }: HotelCardProps) {
           </div>
           <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
             <MapPin className="w-3.5 h-3.5" />
-            {hotel.address}, {hotel.city}, {hotel.country}
+            {hotel.address}
           </div>
           <p className="text-sm text-gray-600 line-clamp-2">{hotel.description}</p>
         </div>

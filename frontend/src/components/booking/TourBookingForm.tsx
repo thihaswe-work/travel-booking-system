@@ -32,12 +32,12 @@ export default function TourBookingForm({ tour, onComplete }: TourBookingFormPro
           <div
             className="bg-primary-500 h-2 rounded-full"
             style={{
-              width: `${Math.min(100, (tour.availableSlots / tour.maxParticipants) * 100)}%`,
+              width: `${Math.min(100, (tour.availableSlots / tour.maxCapacity) * 100)}%`,
             }}
           />
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          {tour.availableSlots} of {tour.maxParticipants} spots remaining
+          {tour.availableSlots} of {tour.maxCapacity} spots remaining
         </p>
       </div>
 

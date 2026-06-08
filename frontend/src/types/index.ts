@@ -1,14 +1,38 @@
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface PaginatedApiResponse<T> extends ApiResponse<T[]> {
+  pagination: PaginationMeta;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export interface User {
   id: string;
+  email: string;
+  role: 'customer' | 'travel_agent' | 'admin';
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
-  role: 'customer' | 'travel_agent' | 'admin';
-  isActive: boolean;
+  phone?: string;
   preferences?: Record<string, unknown>;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
 }
 
 export interface LoginRequest {
@@ -25,11 +49,6 @@ export interface RegisterRequest {
   role: 'customer' | 'travel_agent';
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
 export interface Destination {
   id: string;
   name: string;
@@ -37,123 +56,119 @@ export interface Destination {
   description: string;
   imageUrl?: string;
   isActive: boolean;
-  popularity: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface Flight {
   id: string;
+  destinationId: string;
   airline: string;
   flightNumber: string;
   departureCity: string;
-  departureAirport: string;
-  departureTime: string;
   arrivalCity: string;
-  arrivalAirport: string;
+  departureTime: string;
   arrivalTime: string;
-  duration: number;
-  economyPrice: number;
-  businessPrice: number;
-  firstClassPrice: number;
-  availableEconomySeats: number;
-  availableBusinessSeats: number;
-  availableFirstClassSeats: number;
+  durationMin: number;
+  seatClass: 'economy' | 'business' | 'first';
+  basePrice: number;
+  availableSeats: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  destination?: Destination;
 }
 
 export interface Hotel {
   id: string;
+  destinationId: string;
   name: string;
-  starRating: number;
   address: string;
-  city: string;
-  country: string;
+  starRating: number;
   description: string;
   imageUrl?: string;
   isActive: boolean;
-  rooms: HotelRoom[];
   createdAt: string;
   updatedAt: string;
+  destination?: Destination;
+  rooms?: HotelRoom[];
 }
 
 export interface HotelRoom {
   id: string;
   hotelId: string;
   roomType: string;
-  description: string;
   pricePerNight: number;
   maxGuests: number;
+  totalRooms: number;
   availableRooms: number;
   amenities: string[];
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TourItineraryItem {
+  day: number;
+  title: string;
+  description: string;
 }
 
 export interface Tour {
   id: string;
+  destinationId: string;
   name: string;
   description: string;
-  duration: number;
-  durationUnit: string;
+  durationDays: number;
   pricePerPerson: number;
-  maxParticipants: number;
+  maxCapacity: number;
   availableSlots: number;
   includes: string[];
-  itinerary: string[];
+  itinerary: TourItineraryItem[];
   imageUrl?: string;
-  destinationId?: string;
-  destination?: Destination;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  destination?: Destination;
 }
 
 export interface Booking {
   id: string;
   userId: string;
-  referenceId: string;
-  bookingType: 'flight' | 'hotel' | 'tour';
+  bookingType: 'flight' | 'hotel' | 'tour' | 'package';
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   totalAmount: number;
   currency: string;
-  passengers?: BookingPassenger[];
-  flightId?: string;
-  flight?: Flight;
-  hotelId?: string;
-  hotel?: Hotel;
-  tourId?: string;
-  tour?: Tour;
-  roomId?: string;
-  room?: HotelRoom;
-  checkIn?: string;
-  checkOut?: string;
-  roomQuantity?: number;
-  seatClass?: string;
-  participants?: number;
-  payment?: Payment;
+  referenceId: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
+  user?: User;
+  details?: BookingDetail[];
+  payments?: Payment[];
 }
 
 export interface BookingDetail {
   id: string;
   bookingId: string;
-  itemType: string;
+  itemType: 'flight' | 'hotel' | 'tour';
   itemId: string;
-  itemName: string;
+  checkInDate?: string;
+  checkOutDate?: string;
   quantity: number;
   unitPrice: number;
-  totalPrice: number;
+  subtotal: number;
+  createdAt: string;
+  passengers?: BookingPassenger[];
 }
 
 export interface BookingPassenger {
   id: string;
+  bookingDetailId?: string;
   firstName: string;
   lastName: string;
-  documentType: string;
-  documentNumber: string;
+  documentType?: string;
+  documentNumber?: string;
   seatClass?: string;
 }
 
@@ -162,10 +177,11 @@ export interface Payment {
   bookingId: string;
   amount: number;
   currency: string;
-  method: string;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  cardLastFour?: string;
-  transactionId?: string;
+  paymentMethod: 'card' | 'cash_on_arrival';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  invoiceNumber: string;
+  paidAt?: string;
+  gatewayResponse?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,25 +189,25 @@ export interface Payment {
 export interface Notification {
   id: string;
   userId: string;
-  title: string;
+  type: 'booking_confirmation' | 'cancellation' | 'payment_receipt' | 'reminder' | 'promotional';
+  channel: 'email' | 'sms' | 'in_app';
+  subject?: string;
   message: string;
-  type: string;
   isRead: boolean;
+  sentAt?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  totalPages: number;
-  limit: number;
-}
-
-export interface ApiError {
-  message: string;
-  statusCode: number;
-  errors?: Record<string, string[]>;
+export interface AnalyticsDaily {
+  id: string;
+  date: string;
+  totalBookings: number;
+  totalRevenue: number;
+  totalUsers: number;
+  popularDestination?: string;
+  bookingsByType: Record<string, number>;
+  revenueByType: Record<string, number>;
 }
 
 export interface AnalyticsOverview {
@@ -205,8 +221,15 @@ export interface AnalyticsOverview {
   todayBookingTrend: number;
 }
 
+export interface ApiError {
+  success: boolean;
+  error: {
+    code: string;
+    message: string;
+  };
+}
+
 export interface SearchFilters {
-  // Flight filters
   departureCity?: string;
   arrivalCity?: string;
   departureDate?: string;
@@ -214,8 +237,6 @@ export interface SearchFilters {
   seatClass?: string;
   minPrice?: number;
   maxPrice?: number;
-
-  // Hotel filters
   destination?: string;
   checkIn?: string;
   checkOut?: string;
@@ -223,15 +244,11 @@ export interface SearchFilters {
   starRating?: number;
   minPricePerNight?: number;
   maxPricePerNight?: number;
-
-  // Tour filters
   tourDestination?: string;
   minDuration?: number;
   maxDuration?: number;
   tourMinPrice?: number;
   tourMaxPrice?: number;
-
-  // Common
   query?: string;
   page?: number;
   limit?: number;

@@ -17,12 +17,9 @@ export default function FlightCard({ flight }: FlightCardProps) {
   const depTime = format(parseISO(flight.departureTime), 'HH:mm');
   const arrTime = format(parseISO(flight.arrivalTime), 'HH:mm');
   const depDate = format(parseISO(flight.departureTime), 'MMM dd, yyyy');
-  const hours = Math.floor(flight.duration / 60);
-  const mins = flight.duration % 60;
-  const hasSeats =
-    flight.availableEconomySeats > 0 ||
-    flight.availableBusinessSeats > 0 ||
-    flight.availableFirstClassSeats > 0;
+  const hours = Math.floor(flight.durationMin / 60);
+  const mins = flight.durationMin % 60;
+  const hasSeats = flight.availableSeats > 0;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 card-hover">
@@ -40,7 +37,6 @@ export default function FlightCard({ flight }: FlightCardProps) {
         <div className="flex items-center gap-4 lg:gap-8">
           <div className="text-center">
             <p className="text-xl font-bold text-gray-900">{depTime}</p>
-            <p className="text-xs text-gray-500">{flight.departureAirport}</p>
             <p className="text-xs text-gray-400">{depDate}</p>
           </div>
 
@@ -58,7 +54,6 @@ export default function FlightCard({ flight }: FlightCardProps) {
 
           <div className="text-center">
             <p className="text-xl font-bold text-gray-900">{arrTime}</p>
-            <p className="text-xs text-gray-500">{flight.arrivalAirport}</p>
             <p className="text-xs text-gray-400">{depDate}</p>
           </div>
         </div>
@@ -66,7 +61,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
         <div className="flex items-center gap-4 lg:flex-col lg:items-end">
           <div className="text-right">
             <p className="text-2xl font-bold text-primary-600">
-              {formatCurrency(flight.economyPrice)}
+              {formatCurrency(flight.basePrice)}
             </p>
             <p className="text-xs text-gray-500">per person</p>
           </div>
@@ -86,10 +81,9 @@ export default function FlightCard({ flight }: FlightCardProps) {
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
         <div className="flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
-          <span>Eco: {flight.availableEconomySeats}</span>
+          <span>{flight.availableSeats} seats available</span>
         </div>
-        <span>Bus: {flight.availableBusinessSeats}</span>
-        <span>First: {flight.availableFirstClassSeats}</span>
+        <span>{flight.seatClass}</span>
       </div>
     </div>
   );

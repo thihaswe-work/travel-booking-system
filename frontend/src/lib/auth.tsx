@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { post, get, getApiError } from './api';
-import type { User, LoginRequest, RegisterRequest, AuthTokens } from '@/types';
+import type { User, RegisterRequest, ApiResponse, AuthResponse } from '@/types';
 
 interface AuthContextValue {
   user: User | null;
@@ -42,12 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      const userData = await get<User>('/auth/me');
-      setUser(userData);
+      const response = await get<ApiResponse<User>>('/users/me');
+      setUser(response.data);
     } catch {
       setUser(null);
       localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
     } finally {
       setLoading(false);
     }
@@ -58,17 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await post<{ user: User } & AuthTokens>('/auth/login', { email, password });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    setUser(data.user);
+    const response = await post<ApiResponse<AuthResponse>>('/auth/login', { email, password });
+    localStorage.setItem('accessToken', response.data.accessToken);
+    setUser(response.data.user);
   }, []);
 
   const register = useCallback(async (registerData: RegisterRequest) => {
-    const data = await post<{ user: User } & AuthTokens>('/auth/register', registerData);
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    setUser(data.user);
+    const response = await post<ApiResponse<AuthResponse>>('/auth/register', registerData);
+    localStorage.setItem('accessToken', response.data.accessToken);
+    setUser(response.data.user);
   }, []);
 
   const logout = useCallback(async () => {
@@ -78,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore errors - we clear local state anyway
     }
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     setUser(null);
     router.push('/');
   }, [router]);

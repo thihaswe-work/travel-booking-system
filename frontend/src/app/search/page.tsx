@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
 import { get } from '@/lib/api';
-import type { SearchFilters as SearchFiltersType, PaginatedResponse, Flight, Hotel, Tour } from '@/types';
+import type { SearchFilters as SearchFiltersType, PaginatedApiResponse, Flight, Hotel, Tour } from '@/types';
 import { Search } from 'lucide-react';
 
 export default function SearchPage() {
@@ -15,7 +15,7 @@ export default function SearchPage() {
   const type = (searchParams.get('type') || 'flights') as 'flight' | 'hotel' | 'tour';
 
   const [filters, setFilters] = useState<SearchFiltersType>({});
-  const [results, setResults] = useState<PaginatedResponse<Flight> | PaginatedResponse<Hotel> | PaginatedResponse<Tour> | null>(null);
+  const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchResults = useCallback(async () => {
@@ -25,7 +25,7 @@ export default function SearchPage() {
       delete apiFilters.page;
       const params = { ...apiFilters, page: searchParams.get('page') || 1, limit: 10 };
       const endpoint = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
-      const data = await get<PaginatedResponse<Flight> | PaginatedResponse<Hotel> | PaginatedResponse<Tour>>(endpoint, params);
+      const data = await get<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour>>(endpoint, params);
       setResults(data);
     } catch {
       setResults(null);

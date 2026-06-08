@@ -7,31 +7,31 @@ import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { Flight, PaginatedResponse } from '@/types';
+import type { Flight, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Plane, Plus } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 const flightFields: FieldDefinition[] = [
+  { name: 'destinationId', label: 'Destination ID', type: 'text', required: true },
   { name: 'airline', label: 'Airline', type: 'text', required: true },
   { name: 'flightNumber', label: 'Flight Number', type: 'text', required: true },
   { name: 'departureCity', label: 'Departure City', type: 'text', required: true },
-  { name: 'departureAirport', label: 'Departure Airport', type: 'text', required: true },
   { name: 'departureTime', label: 'Departure Time', type: 'date', required: true },
   { name: 'arrivalCity', label: 'Arrival City', type: 'text', required: true },
-  { name: 'arrivalAirport', label: 'Arrival Airport', type: 'text', required: true },
   { name: 'arrivalTime', label: 'Arrival Time', type: 'date', required: true },
-  { name: 'duration', label: 'Duration (minutes)', type: 'number', required: true },
-  { name: 'economyPrice', label: 'Economy Price', type: 'number', required: true },
-  { name: 'businessPrice', label: 'Business Price', type: 'number', required: true },
-  { name: 'firstClassPrice', label: 'First Class Price', type: 'number', required: true },
-  { name: 'availableEconomySeats', label: 'Economy Seats', type: 'number', required: true },
-  { name: 'availableBusinessSeats', label: 'Business Seats', type: 'number', required: true },
-  { name: 'availableFirstClassSeats', label: 'First Class Seats', type: 'number', required: true },
+  { name: 'durationMin', label: 'Duration (minutes)', type: 'number', required: true },
+  { name: 'seatClass', label: 'Seat Class', type: 'select', options: [
+    { value: 'economy', label: 'Economy' },
+    { value: 'business', label: 'Business' },
+    { value: 'first', label: 'First' },
+  ], required: true },
+  { name: 'basePrice', label: 'Base Price', type: 'number', required: true },
+  { name: 'availableSeats', label: 'Available Seats', type: 'number', required: true },
 ];
 
 export default function AdminFlightsPage() {
-  const [flights, setFlights] = useState<PaginatedResponse<Flight> | null>(null);
+  const [flights, setFlights] = useState<PaginatedApiResponse<Flight> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +43,7 @@ export default function AdminFlightsPage() {
   const fetchFlights = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedResponse<Flight>>('/admin/flights', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Flight>>('/admin/flights', { page, limit: 10 });
       setFlights(data);
     } catch {
       toast.error('Failed to load flights');
@@ -59,13 +59,9 @@ export default function AdminFlightsPage() {
     try {
       const payload = {
         ...data,
-        duration: Number(data.duration),
-        economyPrice: Number(data.economyPrice),
-        businessPrice: Number(data.businessPrice),
-        firstClassPrice: Number(data.firstClassPrice),
-        availableEconomySeats: Number(data.availableEconomySeats),
-        availableBusinessSeats: Number(data.availableBusinessSeats),
-        availableFirstClassSeats: Number(data.availableFirstClassSeats),
+        durationMin: Number(data.durationMin),
+        basePrice: Number(data.basePrice),
+        availableSeats: Number(data.availableSeats),
       };
       if (editFlight) {
         await patch(`/admin/flights/${editFlight.id}`, payload);
@@ -100,10 +96,10 @@ export default function AdminFlightsPage() {
   const columns: Column<Flight>[] = [
     { key: 'airline', header: 'Airline', sortable: true },
     { key: 'flightNumber', header: 'Flight' },
-    { key: 'departureCity', header: 'From', render: (f) => `${f.departureCity} (${f.departureAirport})` },
-    { key: 'arrivalCity', header: 'To', render: (f) => `${f.arrivalCity} (${f.arrivalAirport})` },
+    { key: 'departureCity', header: 'From', render: (f) => f.departureCity },
+    { key: 'arrivalCity', header: 'To', render: (f) => f.arrivalCity },
     { key: 'departureTime', header: 'Departure', render: (f) => formatDateTime(f.departureTime) },
-    { key: 'economyPrice', header: 'Price', render: (f) => formatCurrency(f.economyPrice) },
+    { key: 'basePrice', header: 'Price', render: (f) => formatCurrency(f.basePrice) },
     { key: 'isActive', header: 'Status', render: (f) => (
       <Badge variant={f.isActive ? 'success' : 'danger'} size="sm">
         {f.isActive ? 'Active' : 'Inactive'}
@@ -135,11 +131,11 @@ export default function AdminFlightsPage() {
         rowKey={(f) => f.id}
       />
 
-      {flights && flights.totalPages > 1 && (
+      {flights && flights.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4 gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span className="flex items-center text-sm text-gray-500 px-3">Page {flights.page} of {flights.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= flights.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+          <span className="flex items-center text-sm text-gray-500 px-3">Page {flights.pagination.page} of {flights.pagination.totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= flights.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
 

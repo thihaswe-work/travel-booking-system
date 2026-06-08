@@ -28,7 +28,7 @@ export default function TourCard({ tour }: TourCardProps) {
         <div className="absolute top-3 left-3">
           <Badge variant="primary" size="sm">
             <Clock className="w-3 h-3 mr-1 inline" />
-            {tour.duration} {tour.durationUnit}
+            {tour.durationDays} days
           </Badge>
         </div>
       </div>

@@ -1,11 +1,12 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import type { ApiError } from '@/types';
+import type { ApiError, ApiResponse } from '@/types';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 api.interceptors.request.use(
@@ -30,15 +31,14 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const response = await axios.post(
-            `${api.defaults.baseURL}/auth/refresh`,
-            { refreshToken }
-          );
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const response = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+        const accessToken = response.data?.data?.accessToken;
+        if (accessToken) {
           localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', newRefreshToken);
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
@@ -46,7 +46,6 @@ api.interceptors.response.use(
         }
       } catch {
         localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
@@ -77,14 +76,15 @@ export async function del<T>(url: string): Promise<T> {
   return response.data;
 }
 
+export function unwrapData<T>(response: ApiResponse<T>): T {
+  return response.data;
+}
+
 export function getApiError(error: unknown): string {
   if (error instanceof AxiosError) {
     const apiError = error.response?.data;
-    if (apiError?.message) {
-      return apiError.message;
-    }
-    if (apiError?.errors) {
-      return Object.values(apiError.errors).flat().join(', ');
+    if (apiError?.error?.message) {
+      return apiError.error.message;
     }
     return error.message;
   }

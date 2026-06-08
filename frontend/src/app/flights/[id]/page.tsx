@@ -8,7 +8,7 @@ import FlightBookingForm from '@/components/booking/FlightBookingForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
-import type { Flight, Booking, BookingPassenger } from '@/types';
+import type { Flight, Booking, BookingPassenger, ApiResponse } from '@/types';
 import { Plane, Clock, Calendar, Users, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -23,8 +23,8 @@ export default function FlightDetailPage() {
   useEffect(() => {
     const fetchFlight = async () => {
       try {
-        const data = await get<Flight>(`/flights/${params.id}`);
-        setFlight(data);
+        const data = await get<ApiResponse<Flight>>(`/flights/${params.id}`);
+        setFlight(data.data);
       } catch {
         toast.error('Failed to load flight details');
       } finally {
@@ -37,19 +37,16 @@ export default function FlightDetailPage() {
   const handleBooking = async (passengers: BookingPassenger[], seatClass: string) => {
     setBooking(true);
     try {
-      const bookingData = await post<Booking>('/bookings', {
+      const bookingData = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'flight',
         flightId: flight?.id,
         seatClass,
         passengers,
-        totalAmount: seatClass === 'economy'
-          ? (flight?.economyPrice || 0) * passengers.length
-          : seatClass === 'business'
-          ? (flight?.businessPrice || 0) * passengers.length
-          : (flight?.firstClassPrice || 0) * passengers.length,
+        totalAmount: (flight?.basePrice || 0) * passengers.length,
       });
+      const booking = bookingData.data;
       toast.success('Booking created!');
-      router.push(`/booking/checkout/${bookingData.id}`);
+      router.push(`/booking/checkout/${booking.id}`);
     } catch (err) {
       toast.error(getApiError(err));
     } finally {
@@ -76,8 +73,8 @@ export default function FlightDetailPage() {
     );
   }
 
-  const hours = Math.floor(flight.duration / 60);
-  const mins = flight.duration % 60;
+  const hours = Math.floor(flight.durationMin / 60);
+  const mins = flight.durationMin % 60;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -106,7 +103,6 @@ export default function FlightDetailPage() {
                 <p className="text-3xl font-bold text-gray-900">
                   {new Date(flight.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                <p className="text-sm text-gray-500">{flight.departureAirport}</p>
                 <p className="text-xs text-gray-400">{flight.departureCity}</p>
               </div>
               <div className="flex flex-col items-center px-6">
@@ -126,26 +122,15 @@ export default function FlightDetailPage() {
                 <p className="text-3xl font-bold text-gray-900">
                   {new Date(flight.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
-                <p className="text-sm text-gray-500">{flight.arrivalAirport}</p>
                 <p className="text-xs text-gray-400">{flight.arrivalCity}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="p-4 bg-gray-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(flight.economyPrice)}</p>
-                <p className="text-xs text-gray-500">Economy</p>
-                <p className="text-xs text-gray-400">{flight.availableEconomySeats} seats</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(flight.businessPrice)}</p>
-                <p className="text-xs text-gray-500">Business</p>
-                <p className="text-xs text-gray-400">{flight.availableBusinessSeats} seats</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(flight.firstClassPrice)}</p>
-                <p className="text-xs text-gray-500">First Class</p>
-                <p className="text-xs text-gray-400">{flight.availableFirstClassSeats} seats</p>
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(flight.basePrice)}</p>
+                <p className="text-xs text-gray-500">{flight.seatClass === 'economy' ? 'Economy' : flight.seatClass === 'business' ? 'Business' : 'First Class'}</p>
+                <p className="text-xs text-gray-400">{flight.availableSeats} seats</p>
               </div>
             </div>
           </div>

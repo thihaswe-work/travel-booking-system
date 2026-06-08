@@ -8,7 +8,7 @@ import TourBookingForm from '@/components/booking/TourBookingForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
-import type { Tour, Booking } from '@/types';
+import type { Tour, Booking, ApiResponse } from '@/types';
 import { Clock, Users, Check, MapPin, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -23,8 +23,8 @@ export default function TourDetailPage() {
   useEffect(() => {
     const fetchTour = async () => {
       try {
-        const data = await get<Tour>(`/tours/${params.id}`);
-        setTour(data);
+        const data = await get<ApiResponse<Tour>>(`/tours/${params.id}`);
+        setTour(data.data);
       } catch {
         toast.error('Failed to load tour details');
       } finally {
@@ -39,14 +39,14 @@ export default function TourDetailPage() {
     setBooking(true);
     try {
       const totalAmount = tour.pricePerPerson * participants;
-      const bookingData = await post<Booking>('/bookings', {
+      const res = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'tour',
         tourId: tour.id,
         participants,
         totalAmount,
       });
       toast.success('Booking created!');
-      router.push(`/booking/checkout/${bookingData.id}`);
+      router.push(`/booking/checkout/${res.data.id}`);
     } catch (err) {
       toast.error(getApiError(err));
     } finally {
@@ -91,7 +91,7 @@ export default function TourDetailPage() {
         <div className="absolute top-4 left-4 flex gap-2">
           <Badge variant="primary" size="md">
             <Clock className="w-3.5 h-3.5 mr-1 inline" />
-            {tour.duration} {tour.durationUnit}
+            {tour.durationDays} days
           </Badge>
           <Badge variant="success" size="md">
             <Users className="w-3.5 h-3.5 mr-1 inline" />
@@ -137,14 +137,15 @@ export default function TourDetailPage() {
                   <div key={i} className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-bold text-primary-600">{i + 1}</span>
+                        <span className="text-sm font-bold text-primary-600">{item.day}</span>
                       </div>
                       {i < tour.itinerary.length - 1 && (
                         <div className="w-px flex-1 bg-gray-200 my-1" />
                       )}
                     </div>
                     <div className="flex-1 pb-4">
-                      <p className="text-sm text-gray-700">{item}</p>
+                      <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                      <p className="text-sm text-gray-700">{item.description}</p>
                     </div>
                   </div>
                 ))}
@@ -164,11 +165,11 @@ export default function TourDetailPage() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Duration</span>
-                <span className="font-medium text-gray-900">{tour.duration} {tour.durationUnit}</span>
+                <span className="font-medium text-gray-900">{tour.durationDays} days</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Max Participants</span>
-                <span className="font-medium text-gray-900">{tour.maxParticipants}</span>
+                <span className="font-medium text-gray-900">{tour.maxCapacity}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Available</span>

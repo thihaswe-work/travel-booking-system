@@ -7,6 +7,20 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  // Clear existing data
+  await prisma.bookingPassenger.deleteMany();
+  await prisma.bookingDetail.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.analyticsDaily.deleteMany();
+  await prisma.booking.deleteMany();
+  await prisma.hotelRoom.deleteMany();
+  await prisma.tour.deleteMany();
+  await prisma.flight.deleteMany();
+  await prisma.hotel.deleteMany();
+  await prisma.destination.deleteMany();
+  await prisma.user.deleteMany();
+
   const passwordHash = await bcrypt.hash('Password123!', 12);
 
   const admin = await prisma.user.upsert({
@@ -56,44 +70,38 @@ async function main() {
 
   console.log('Users seeded');
 
-  const tokyo = await prisma.destination.upsert({
-    where: { id: 'tokyo-dest' },
-    update: {},
-    create: {
-      id: 'tokyo-dest',
-      name: 'Tokyo',
-      country: 'Japan',
-      description: 'Tokyo, the bustling capital of Japan, blends ultramodern and traditional experiences.',
-      imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
-      isActive: true,
-    },
-  });
-
-  const paris = await prisma.destination.upsert({
-    where: { id: 'paris-dest' },
-    update: {},
-    create: {
-      id: 'paris-dest',
-      name: 'Paris',
-      country: 'France',
-      description: 'The City of Light, known for its art, fashion, gastronomy, and culture.',
-      imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800',
-      isActive: true,
-    },
-  });
-
-  const newyork = await prisma.destination.upsert({
-    where: { id: 'nyc-dest' },
-    update: {},
-    create: {
-      id: 'nyc-dest',
-      name: 'New York',
-      country: 'United States',
-      description: 'The Big Apple, a global hub for finance, culture, and entertainment.',
-      imageUrl: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800',
-      isActive: true,
-    },
-  });
+  const [tokyo, paris, newyork] = await Promise.all([
+    prisma.destination.create({
+      data: {
+        id: uuidv4(),
+        name: 'Tokyo',
+        country: 'Japan',
+        description: 'Tokyo, the bustling capital of Japan, blends ultramodern and traditional experiences.',
+        imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
+        isActive: true,
+      },
+    }),
+    prisma.destination.create({
+      data: {
+        id: uuidv4(),
+        name: 'Paris',
+        country: 'France',
+        description: 'The City of Light, known for its art, fashion, gastronomy, and culture.',
+        imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800',
+        isActive: true,
+      },
+    }),
+    prisma.destination.create({
+      data: {
+        id: uuidv4(),
+        name: 'New York',
+        country: 'United States',
+        description: 'The Big Apple, a global hub for finance, culture, and entertainment.',
+        imageUrl: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800',
+        isActive: true,
+      },
+    }),
+  ]);
 
   console.log('Destinations seeded');
 

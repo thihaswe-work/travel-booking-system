@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { get, patch, getApiError } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
-import type { Notification } from '@/types';
+import type { Notification, ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Bell, CheckCheck, MailOpen, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -18,8 +18,8 @@ export default function NotificationsPage() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const data = await get<Notification[]>('/notifications');
-      setNotifications(data);
+      const data = await get<ApiResponse<Notification[]>>('/notifications');
+      setNotifications(data.data);
     } catch {
       toast.error('Failed to load notifications');
     } finally {
@@ -124,7 +124,7 @@ export default function NotificationsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className={`text-sm ${!notification.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
-                      {notification.title}
+                      {notification.subject || notification.type}
                     </h4>
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       {formatDateTime(notification.createdAt)}

@@ -7,31 +7,25 @@ import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { Tour, PaginatedResponse } from '@/types';
+import type { Tour, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Compass, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
 const tourFields: FieldDefinition[] = [
+  { name: 'destinationId', label: 'Destination ID', type: 'text', required: true },
   { name: 'name', label: 'Tour Name', type: 'text', required: true },
   { name: 'description', label: 'Description', type: 'textarea', required: true },
-  { name: 'duration', label: 'Duration', type: 'number', required: true },
-  { name: 'durationUnit', label: 'Duration Unit', type: 'select', options: [
-    { value: 'days', label: 'Days' },
-    { value: 'hours', label: 'Hours' },
-    { value: 'weeks', label: 'Weeks' },
-  ]},
+  { name: 'durationDays', label: 'Duration (days)', type: 'number', required: true },
   { name: 'pricePerPerson', label: 'Price Per Person', type: 'number', required: true },
-  { name: 'maxParticipants', label: 'Max Participants', type: 'number', required: true },
+  { name: 'maxCapacity', label: 'Max Capacity', type: 'number', required: true },
   { name: 'availableSlots', label: 'Available Slots', type: 'number', required: true },
   { name: 'includes', label: 'Includes', type: 'json' },
   { name: 'itinerary', label: 'Itinerary', type: 'json' },
-  { name: 'imageUrl', label: 'Image URL', type: 'text' },
-  { name: 'destinationId', label: 'Destination ID', type: 'text' },
 ];
 
 export default function AdminToursPage() {
-  const [tours, setTours] = useState<PaginatedResponse<Tour> | null>(null);
+  const [tours, setTours] = useState<PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +37,7 @@ export default function AdminToursPage() {
   const fetchTours = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedResponse<Tour>>('/admin/tours', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Tour>>('/admin/tours', { page, limit: 10 });
       setTours(data);
     } catch {
       toast.error('Failed to load tours');
@@ -59,9 +53,9 @@ export default function AdminToursPage() {
     try {
       const payload = {
         ...data,
-        duration: Number(data.duration),
+        durationDays: Number(data.durationDays),
         pricePerPerson: Number(data.pricePerPerson),
-        maxParticipants: Number(data.maxParticipants),
+        maxCapacity: Number(data.maxCapacity),
         availableSlots: Number(data.availableSlots),
       };
       if (editTour) {
@@ -96,9 +90,9 @@ export default function AdminToursPage() {
 
   const columns: Column<Tour>[] = [
     { key: 'name', header: 'Name', sortable: true },
-    { key: 'duration', header: 'Duration', render: (t) => `${t.duration} ${t.durationUnit}` },
+    { key: 'durationDays', header: 'Duration', render: (t) => `${t.durationDays} days` },
     { key: 'pricePerPerson', header: 'Price', render: (t) => formatCurrency(t.pricePerPerson) },
-    { key: 'availableSlots', header: 'Slots', render: (t) => `${t.availableSlots}/${t.maxParticipants}` },
+    { key: 'availableSlots', header: 'Slots', render: (t) => `${t.availableSlots}/${t.maxCapacity}` },
     { key: 'isActive', header: 'Status', render: (t) => (
       <Badge variant={t.isActive ? 'success' : 'danger'} size="sm">{t.isActive ? 'Active' : 'Inactive'}</Badge>
     )},
@@ -119,11 +113,11 @@ export default function AdminToursPage() {
       <Table columns={columns} data={tours?.data || []} loading={loading} emptyMessage="No tours found"
         onRowClick={(t) => { setEditTour(t); setModalOpen(true); }} rowKey={(t) => t.id} />
 
-      {tours && tours.totalPages > 1 && (
+      {tours && tours.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4 gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span className="flex items-center text-sm text-gray-500 px-3">Page {tours.page} of {tours.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= tours.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+          <span className="flex items-center text-sm text-gray-500 px-3">Page {tours.pagination.page} of {tours.pagination.totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= tours.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
 

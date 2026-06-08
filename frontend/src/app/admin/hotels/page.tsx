@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { Hotel, PaginatedResponse } from '@/types';
+import type { Hotel, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Building2, Plus } from 'lucide-react';
 
@@ -15,14 +15,13 @@ const hotelFields: FieldDefinition[] = [
   { name: 'name', label: 'Hotel Name', type: 'text', required: true },
   { name: 'starRating', label: 'Star Rating', type: 'number', required: true, min: 1, max: 5 },
   { name: 'address', label: 'Address', type: 'text', required: true },
-  { name: 'city', label: 'City', type: 'text', required: true },
-  { name: 'country', label: 'Country', type: 'text', required: true },
+  { name: 'destinationId', label: 'Destination ID', type: 'text', required: true },
   { name: 'description', label: 'Description', type: 'textarea', required: true },
   { name: 'imageUrl', label: 'Image URL', type: 'text' },
 ];
 
 export default function AdminHotelsPage() {
-  const [hotels, setHotels] = useState<PaginatedResponse<Hotel> | null>(null);
+  const [hotels, setHotels] = useState<PaginatedApiResponse<Hotel> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -34,7 +33,7 @@ export default function AdminHotelsPage() {
   const fetchHotels = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedResponse<Hotel>>('/admin/hotels', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Hotel>>('/admin/hotels', { page, limit: 10 });
       setHotels(data);
     } catch {
       toast.error('Failed to load hotels');
@@ -81,10 +80,8 @@ export default function AdminHotelsPage() {
 
   const columns: Column<Hotel>[] = [
     { key: 'name', header: 'Name', sortable: true },
-    { key: 'city', header: 'City' },
-    { key: 'country', header: 'Country' },
     { key: 'starRating', header: 'Stars', render: (h) => `${'★'.repeat(h.starRating)}` },
-    { key: 'rooms', header: 'Rooms', render: (h) => h.rooms?.length || 0 },
+    { key: 'address', header: 'Address' },
     { key: 'isActive', header: 'Status', render: (h) => (
       <Badge variant={h.isActive ? 'success' : 'danger'} size="sm">{h.isActive ? 'Active' : 'Inactive'}</Badge>
     )},
@@ -105,11 +102,11 @@ export default function AdminHotelsPage() {
       <Table columns={columns} data={hotels?.data || []} loading={loading} emptyMessage="No hotels found"
         onRowClick={(h) => { setEditHotel(h); setModalOpen(true); }} rowKey={(h) => h.id} />
 
-      {hotels && hotels.totalPages > 1 && (
+      {hotels && hotels.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4 gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span className="flex items-center text-sm text-gray-500 px-3">Page {hotels.page} of {hotels.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= hotels.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+          <span className="flex items-center text-sm text-gray-500 px-3">Page {hotels.pagination.page} of {hotels.pagination.totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= hotels.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
 

@@ -39,16 +39,7 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
   ]);
 
   const getPriceForClass = (seatClass: string): number => {
-    switch (seatClass) {
-      case 'economy':
-        return flight.economyPrice;
-      case 'business':
-        return flight.businessPrice;
-      case 'first':
-        return flight.firstClassPrice;
-      default:
-        return flight.economyPrice;
-    }
+    return flight.basePrice;
   };
 
   const totalPrice = useMemo(

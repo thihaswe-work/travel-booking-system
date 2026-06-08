@@ -7,7 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import HotelBookingForm from '@/components/booking/HotelBookingForm';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
-import type { Hotel, Booking } from '@/types';
+import type { Hotel, Booking, ApiResponse } from '@/types';
 import { MapPin, Star, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -22,8 +22,8 @@ export default function HotelDetailPage() {
   useEffect(() => {
     const fetchHotel = async () => {
       try {
-        const data = await get<Hotel>(`/hotels/${params.id}`);
-        setHotel(data);
+        const data = await get<ApiResponse<Hotel>>(`/hotels/${params.id}`);
+        setHotel(data.data);
       } catch {
         toast.error('Failed to load hotel details');
       } finally {
@@ -37,12 +37,12 @@ export default function HotelDetailPage() {
     if (!hotel) return;
     setBooking(true);
     try {
-      const room = hotel.rooms.find((r) => r.id === roomId);
+      const room = hotel.rooms?.find((r) => r.id === roomId);
       const nights = Math.floor(
         (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
       );
       const totalAmount = (room?.pricePerNight || 0) * nights * quantity;
-      const bookingData = await post<Booking>('/bookings', {
+      const res = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'hotel',
         hotelId: hotel.id,
         roomId,
@@ -52,7 +52,7 @@ export default function HotelDetailPage() {
         totalAmount,
       });
       toast.success('Booking created!');
-      router.push(`/booking/checkout/${bookingData.id}`);
+      router.push(`/booking/checkout/${res.data.id}`);
     } catch (err) {
       toast.error(getApiError(err));
     } finally {
@@ -111,7 +111,7 @@ export default function HotelDetailPage() {
             </div>
             <div className="flex items-center gap-1 text-sm text-gray-500 mb-4">
               <MapPin className="w-4 h-4" />
-              {hotel.address}, {hotel.city}, {hotel.country}
+              {hotel.address}
             </div>
             <p className="text-gray-700 leading-relaxed">{hotel.description}</p>
           </div>
@@ -120,7 +120,7 @@ export default function HotelDetailPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Book a Room</h2>
             <HotelBookingForm
               hotel={hotel}
-              rooms={hotel.rooms}
+              rooms={hotel.rooms || []}
               onComplete={handleBooking}
             />
           </div>
@@ -136,17 +136,17 @@ export default function HotelDetailPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Rooms</span>
-                <span className="font-medium text-gray-900">{hotel.rooms.length} types</span>
+                <span className="font-medium text-gray-900">{hotel.rooms?.length || 0} types</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Location</span>
-                <span className="font-medium text-gray-900">{hotel.city}</span>
+                <span className="font-medium text-gray-900">{hotel.address}</span>
               </div>
-              {hotel.rooms.length > 0 && (
+              {hotel.rooms && hotel.rooms.length > 0 && (
                 <div className="pt-3 border-t border-gray-100">
                   <p className="text-gray-500 text-xs mb-1">Starting from</p>
                   <p className="text-xl font-bold text-primary-600">
-                    {formatCurrency(Math.min(...hotel.rooms.map((r) => r.pricePerNight)))}
+                    {formatCurrency(Math.min(...(hotel.rooms || []).map((r) => r.pricePerNight)))}
                   </p>
                   <p className="text-xs text-gray-400">per night</p>
                 </div>

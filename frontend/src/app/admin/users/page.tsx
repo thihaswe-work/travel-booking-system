@@ -9,7 +9,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { User, PaginatedResponse } from '@/types';
+import type { User, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Search, Users as UsersIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
@@ -31,7 +31,7 @@ const userFields: FieldDefinition[] = [
 ];
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<PaginatedResponse<User> | null>(null);
+  const [users, setUsers] = useState<PaginatedApiResponse<User> | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -46,7 +46,7 @@ export default function AdminUsersPage() {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (search) params.query = search;
       if (roleFilter) params.role = roleFilter;
-      const data = await get<PaginatedResponse<User>>('/admin/users', params);
+      const data = await get<PaginatedApiResponse<User>>('/admin/users', params);
       setUsers(data);
     } catch {
       toast.error('Failed to load users');
@@ -138,7 +138,7 @@ export default function AdminUsersPage() {
         rowKey={(u) => u.id}
       />
 
-      {users && users.totalPages > 1 && (
+      {users && users.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4">
           <div className="flex gap-2">
             <Button
@@ -150,12 +150,12 @@ export default function AdminUsersPage() {
               Previous
             </Button>
             <span className="flex items-center text-sm text-gray-500 px-3">
-              Page {users.page} of {users.totalPages}
+              Page {users.pagination.page} of {users.pagination.totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= users.totalPages}
+              disabled={page >= users.pagination.totalPages}
               onClick={() => setPage(page + 1)}
             >
               Next

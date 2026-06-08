@@ -7,12 +7,12 @@ import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import BookingSummary from '@/components/booking/BookingSummary';
-import type { Booking, PaginatedResponse } from '@/types';
+import type { Booking, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { BookOpen } from 'lucide-react';
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<PaginatedResponse<Booking> | null>(null);
+  const [bookings, setBookings] = useState<PaginatedApiResponse<Booking> | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -26,7 +26,7 @@ export default function AdminBookingsPage() {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
       if (typeFilter) params.bookingType = typeFilter;
-      const data = await get<PaginatedResponse<Booking>>('/admin/bookings', params);
+      const data = await get<PaginatedApiResponse<Booking>>('/admin/bookings', params);
       setBookings(data);
     } catch {
       toast.error('Failed to load bookings');
@@ -45,7 +45,7 @@ export default function AdminBookingsPage() {
       toast.success(`Booking ${status}`);
       fetchBookings();
       if (viewBooking?.id === booking.id) {
-        const updated = await get<Booking>(`/bookings/${booking.id}`);
+        const res = await get<import('@/types').ApiResponse<Booking>>(`/bookings/${booking.id}`); const updated = res.data;
         setViewBooking(updated);
       }
     } catch (err) {
@@ -102,16 +102,16 @@ export default function AdminBookingsPage() {
         loading={loading}
       />
 
-      {bookings && bookings.totalPages > 1 && (
+      {bookings && bookings.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4">
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
               Previous
             </Button>
             <span className="flex items-center text-sm text-gray-500 px-3">
-              Page {bookings.page} of {bookings.totalPages}
+              Page {bookings.pagination.page} of {bookings.pagination.totalPages}
             </span>
-            <Button variant="outline" size="sm" disabled={page >= bookings.totalPages} onClick={() => setPage(page + 1)}>
+            <Button variant="outline" size="sm" disabled={page >= bookings.pagination.totalPages} onClick={() => setPage(page + 1)}>
               Next
             </Button>
           </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { formatCurrency, formatDateTime, getStatusColor } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import type { Booking } from '@/types';
+import type { Booking, Payment } from '@/types';
 import { CheckCircle, ArrowRight, Home } from 'lucide-react';
 
 interface BookingConfirmationProps {
@@ -44,20 +44,20 @@ export default function BookingConfirmation({ booking }: BookingConfirmationProp
               </span>
             </div>
           )}
-          {booking.payment?.status && (
+          {booking.payments?.[0]?.paymentStatus && (
             <div className="flex justify-between py-2 border-t border-gray-100">
               <span className="text-gray-500">Payment Status</span>
               <Badge
                 variant={
-                  booking.payment.status === 'completed'
+                  booking.payments[0].paymentStatus === 'paid'
                     ? 'success'
-                    : booking.payment.status === 'failed'
+                    : booking.payments[0].paymentStatus === 'failed'
                     ? 'danger'
                     : 'warning'
                 }
                 size="sm"
               >
-                {booking.payment.status}
+                {booking.payments[0].paymentStatus}
               </Badge>
             </div>
           )}

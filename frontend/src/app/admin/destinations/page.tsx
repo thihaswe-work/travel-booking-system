@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { Destination, PaginatedResponse } from '@/types';
+import type { Destination, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { MapPin, Plus } from 'lucide-react';
 
@@ -16,11 +16,11 @@ const destFields: FieldDefinition[] = [
   { name: 'country', label: 'Country', type: 'text', required: true },
   { name: 'description', label: 'Description', type: 'textarea', required: true },
   { name: 'imageUrl', label: 'Image URL', type: 'text' },
-  { name: 'popularity', label: 'Popularity', type: 'number' },
+
 ];
 
 export default function AdminDestinationsPage() {
-  const [destinations, setDestinations] = useState<PaginatedResponse<Destination> | null>(null);
+  const [destinations, setDestinations] = useState<PaginatedApiResponse<Destination> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -32,7 +32,7 @@ export default function AdminDestinationsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedResponse<Destination>>('/admin/destinations', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Destination>>('/admin/destinations', { page, limit: 10 });
       setDestinations(data);
     } catch {
       toast.error('Failed to load destinations');
@@ -46,7 +46,7 @@ export default function AdminDestinationsPage() {
   const handleSubmit = async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
-      const payload = { ...data, popularity: Number(data.popularity || 0) };
+      const payload = { ...data };
       if (editDest) {
         await patch(`/admin/destinations/${editDest.id}`, payload);
         toast.success('Destination updated');
@@ -91,14 +91,10 @@ export default function AdminDestinationsPage() {
     { key: 'name', header: 'Name', sortable: true },
     { key: 'country', header: 'Country' },
     { key: 'description', header: 'Description', render: (d) => d.description?.slice(0, 60) + '...' },
-    { key: 'popularity', header: 'Popularity' },
     { key: 'isActive', header: 'Status', render: (d) => (
-      <button onClick={(e) => { e.stopPropagation(); handleToggleActive(d); }}>
-        <Badge variant={d.isActive ? 'success' : 'danger'} size="sm" className="cursor-pointer">
-          {d.isActive ? 'Active' : 'Inactive'}
-        </Badge>
-      </button>
+      <Badge variant={d.isActive ? 'success' : 'danger'} size="sm">{d.isActive ? 'Active' : 'Inactive'}</Badge>
     )},
+
   ];
 
   return (
@@ -116,11 +112,11 @@ export default function AdminDestinationsPage() {
       <Table columns={columns} data={destinations?.data || []} loading={loading} emptyMessage="No destinations found"
         onRowClick={(d) => { setEditDest(d); setModalOpen(true); }} rowKey={(d) => d.id} />
 
-      {destinations && destinations.totalPages > 1 && (
+      {destinations && destinations.pagination.totalPages > 1 && (
         <div className="flex justify-center mt-4 gap-2">
           <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span className="flex items-center text-sm text-gray-500 px-3">Page {destinations.page} of {destinations.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page >= destinations.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
+          <span className="flex items-center text-sm text-gray-500 px-3">Page {destinations.pagination.page} of {destinations.pagination.totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= destinations.pagination.totalPages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
 

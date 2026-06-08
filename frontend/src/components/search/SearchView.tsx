@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
@@ -20,6 +20,7 @@ export default function SearchView({ type }: SearchViewProps) {
   const [filters, setFilters] = useState<SearchFiltersType>({});
   const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
+  const initialLoad = useRef(true);
 
   const fetchResults = useCallback(async () => {
     setLoading(true);
@@ -31,9 +32,10 @@ export default function SearchView({ type }: SearchViewProps) {
       const data = await get<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour>>(endpoint, params);
       setResults(data);
     } catch {
-      setResults(null);
+      if (initialLoad.current) setResults(null);
     } finally {
       setLoading(false);
+      initialLoad.current = false;
     }
   }, [filters, type, searchParams]);
 
@@ -59,17 +61,15 @@ export default function SearchView({ type }: SearchViewProps) {
       }
     });
     const prefix = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
-    router.push(`${prefix}?${params.toString()}`);
+    router.replace(`${prefix}?${params.toString()}`);
   };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(page));
     const prefix = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
-    router.push(`${prefix}?${params.toString()}`);
+    router.replace(`${prefix}?${params.toString()}`);
   };
-
-  const page = parseInt(searchParams.get('page') || '1', 10);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

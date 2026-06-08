@@ -24,7 +24,7 @@ export default function SearchResults({
   onPageChange,
   emptyMessage,
 }: SearchResultsProps) {
-  if (loading) {
+  if (loading && !results) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
@@ -58,7 +58,7 @@ export default function SearchResults({
       <p className="text-sm text-gray-500 mb-4">
         {results.pagination.total} {type}{results.pagination.total !== 1 ? 's' : ''} found
       </p>
-      <div className="space-y-4">
+      <div className={`space-y-4 ${loading ? 'opacity-50 pointer-events-none transition-opacity' : ''}`}>
         {type === 'flight' &&
           (results as PaginatedApiResponse<Flight>).data.map((flight) => (
             <FlightCard key={flight.id} flight={flight} />

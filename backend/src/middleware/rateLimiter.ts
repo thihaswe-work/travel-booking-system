@@ -50,4 +50,4 @@ function getRateLimiter(windowMs: number, maxRequests: number) {
 }
 
 export const generalLimiter = getRateLimiter(60 * 1000, 100);
-export const authLimiter = getRateLimiter(60 * 1000, 10);
+export const authLimiter = getRateLimiter(60 * 1000, 100);

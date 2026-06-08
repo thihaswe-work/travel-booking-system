@@ -9,9 +9,9 @@ import { Menu, X, ChevronDown, LogOut, User, BookOpen, Plane, Building2, Compass
 
 const navLinks = [
   { href: '/', label: 'Home' },
-  { href: '/search?type=flights', label: 'Flights', icon: Plane },
-  { href: '/search?type=hotels', label: 'Hotels', icon: Building2 },
-  { href: '/search?type=tours', label: 'Tours', icon: Compass },
+  { href: '/flights', label: 'Flights', icon: Plane },
+  { href: '/hotels', label: 'Hotels', icon: Building2 },
+  { href: '/tours', label: 'Tours', icon: Compass },
 ];
 
 export default function Header() {

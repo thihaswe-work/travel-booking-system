@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Input from '@/components/ui/Input';
+import AutocompleteInput from '@/components/ui/AutocompleteInput';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { SearchFilters as SearchFiltersType } from '@/types';
@@ -57,17 +58,21 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
     <div className="space-y-4">
       {type === 'flight' && (
         <>
-          <Input
+          <AutocompleteInput
             label="From"
             placeholder="Departure city"
             value={local.departureCity || ''}
-            onChange={(e) => update('departureCity', e.target.value)}
+            onChange={(v) => update('departureCity', v)}
+            endpoint="/flights"
+            field="departureCity"
           />
-          <Input
+          <AutocompleteInput
             label="To"
             placeholder="Arrival city"
             value={local.arrivalCity || ''}
-            onChange={(e) => update('arrivalCity', e.target.value)}
+            onChange={(v) => update('arrivalCity', v)}
+            endpoint="/flights"
+            field="arrivalCity"
           />
           <Input
             label="Departure Date"
@@ -103,11 +108,13 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
 
       {type === 'hotel' && (
         <>
-          <Input
+          <AutocompleteInput
             label="Destination"
             placeholder="City or hotel name"
             value={local.destination || ''}
-            onChange={(e) => update('destination', e.target.value)}
+            onChange={(v) => update('destination', v)}
+            endpoint="/hotels"
+            field="destination"
           />
           <Input
             label="Check-in"
@@ -157,11 +164,13 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
 
       {type === 'tour' && (
         <>
-          <Input
+          <AutocompleteInput
             label="Destination"
             placeholder="Tour destination"
             value={local.tourDestination || ''}
-            onChange={(e) => update('tourDestination', e.target.value)}
+            onChange={(v) => update('tourDestination', v)}
+            endpoint="/tours"
+            field="tourDestination"
           />
           <div className="grid grid-cols-2 gap-2">
             <Input

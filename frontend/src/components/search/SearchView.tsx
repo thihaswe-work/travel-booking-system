@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
@@ -20,38 +20,31 @@ export default function SearchView({ type }: SearchViewProps) {
   const [filters, setFilters] = useState<SearchFiltersType>({});
   const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
-  const initialLoad = useRef(true);
 
-  const fetchResults = useCallback(async () => {
+  const doFetch = useCallback(async (f: SearchFiltersType, page: string) => {
     setLoading(true);
     try {
-      const apiFilters: Record<string, unknown> = { ...filters };
+      const apiFilters: Record<string, unknown> = { ...f };
       delete apiFilters.page;
-      const params = { ...apiFilters, page: searchParams.get('page') || 1, limit: 10 };
+      const params = { ...apiFilters, page, limit: 10 };
       const endpoint = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
       const data = await get<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour>>(endpoint, params);
       setResults(data);
     } catch {
-      if (initialLoad.current) setResults(null);
+      setResults(null);
     } finally {
       setLoading(false);
-      initialLoad.current = false;
     }
-  }, [filters, type, searchParams]);
+  }, [type]);
 
   useEffect(() => {
-    const newFilters: SearchFiltersType = {};
+    const f: SearchFiltersType = {};
     searchParams.forEach((value, key) => {
-      if (key !== 'type') {
-        (newFilters as Record<string, string>)[key] = value;
-      }
+      if (key !== 'type') (f as Record<string, string>)[key] = value;
     });
-    setFilters(newFilters);
-  }, [searchParams]);
-
-  useEffect(() => {
-    fetchResults();
-  }, [fetchResults]);
+    setFilters(f);
+    doFetch(f, searchParams.get('page') || '1');
+  }, [searchParams, doFetch]);
 
   const handleFilterChange = (newFilters: SearchFiltersType) => {
     const params = new URLSearchParams();

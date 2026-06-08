@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
+import Spinner from '@/components/ui/Spinner';
 import { get } from '@/lib/api';
 import type { SearchFilters as SearchFiltersType, PaginatedApiResponse, Flight, Hotel, Tour } from '@/types';
 import { Search } from 'lucide-react';
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -89,5 +90,13 @@ export default function SearchPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Spinner size="lg" label="Loading search..." /></div>}>
+      <SearchContent />
+    </Suspense>
   );
 }

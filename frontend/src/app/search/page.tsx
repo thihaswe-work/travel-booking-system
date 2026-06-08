@@ -12,7 +12,8 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const type = (searchParams.get('type') || 'flights') as 'flight' | 'hotel' | 'tour';
+  const rawType = searchParams.get('type') || 'flights';
+  const type: 'flight' | 'hotel' | 'tour' = rawType === 'flights' ? 'flight' : rawType === 'hotels' ? 'hotel' : 'tour';
 
   const [filters, setFilters] = useState<SearchFiltersType>({});
   const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);

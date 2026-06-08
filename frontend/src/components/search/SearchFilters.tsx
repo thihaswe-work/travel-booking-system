@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect, useRef } from 'react';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
@@ -16,13 +15,28 @@ interface SearchFiltersProps {
 
 export default function SearchFilters({ filters, onChange, type }: SearchFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [local, setLocal] = useState<SearchFiltersType>(filters);
+  const initial = useRef(filters);
 
-  const handleChange = (key: keyof SearchFiltersType, value: string | number | undefined) => {
-    onChange({ ...filters, [key]: value || undefined });
+  useEffect(() => {
+    if (JSON.stringify(filters) !== JSON.stringify(initial.current)) {
+      setLocal(filters);
+      initial.current = filters;
+    }
+  }, [filters]);
+
+  const update = (key: keyof SearchFiltersType, value: string | number | undefined) => {
+    setLocal((prev) => ({ ...prev, [key]: value || undefined }));
+  };
+
+  const handleApply = () => {
+    onChange(local);
   };
 
   const handleReset = () => {
-    onChange({});
+    const empty: SearchFiltersType = {};
+    setLocal(empty);
+    onChange(empty);
   };
 
   const seatClassOptions = [
@@ -46,42 +60,42 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
           <Input
             label="From"
             placeholder="Departure city"
-            value={filters.departureCity || ''}
-            onChange={(e) => handleChange('departureCity', e.target.value)}
+            value={local.departureCity || ''}
+            onChange={(e) => update('departureCity', e.target.value)}
           />
           <Input
             label="To"
             placeholder="Arrival city"
-            value={filters.arrivalCity || ''}
-            onChange={(e) => handleChange('arrivalCity', e.target.value)}
+            value={local.arrivalCity || ''}
+            onChange={(e) => update('arrivalCity', e.target.value)}
           />
           <Input
             label="Departure Date"
             type="date"
-            value={filters.departureDate || ''}
-            onChange={(e) => handleChange('departureDate', e.target.value)}
+            value={local.departureDate || ''}
+            onChange={(e) => update('departureDate', e.target.value)}
           />
           <Select
             label="Seat Class"
             options={seatClassOptions}
             placeholder="All classes"
-            value={filters.seatClass || ''}
-            onChange={(e) => handleChange('seatClass', e.target.value || undefined)}
+            value={local.seatClass || ''}
+            onChange={(e) => update('seatClass', e.target.value || undefined)}
           />
           <div className="grid grid-cols-2 gap-2">
             <Input
               label="Min Price"
               type="number"
               placeholder="$0"
-              value={filters.minPrice || ''}
-              onChange={(e) => handleChange('minPrice', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.minPrice || ''}
+              onChange={(e) => update('minPrice', e.target.value ? Number(e.target.value) : undefined)}
             />
             <Input
               label="Max Price"
               type="number"
               placeholder="$9999"
-              value={filters.maxPrice || ''}
-              onChange={(e) => handleChange('maxPrice', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.maxPrice || ''}
+              onChange={(e) => update('maxPrice', e.target.value ? Number(e.target.value) : undefined)}
             />
           </div>
         </>
@@ -92,50 +106,50 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
           <Input
             label="Destination"
             placeholder="City or hotel name"
-            value={filters.destination || ''}
-            onChange={(e) => handleChange('destination', e.target.value)}
+            value={local.destination || ''}
+            onChange={(e) => update('destination', e.target.value)}
           />
           <Input
             label="Check-in"
             type="date"
-            value={filters.checkIn || ''}
-            onChange={(e) => handleChange('checkIn', e.target.value)}
+            value={local.checkIn || ''}
+            onChange={(e) => update('checkIn', e.target.value)}
           />
           <Input
             label="Check-out"
             type="date"
-            value={filters.checkOut || ''}
-            onChange={(e) => handleChange('checkOut', e.target.value)}
+            value={local.checkOut || ''}
+            onChange={(e) => update('checkOut', e.target.value)}
           />
           <Input
             label="Guests"
             type="number"
             min={1}
             placeholder="1"
-            value={filters.guests || ''}
-            onChange={(e) => handleChange('guests', e.target.value ? Number(e.target.value) : undefined)}
+            value={local.guests || ''}
+            onChange={(e) => update('guests', e.target.value ? Number(e.target.value) : undefined)}
           />
           <Select
             label="Star Rating"
             options={starOptions}
             placeholder="Any rating"
-            value={filters.starRating?.toString() || ''}
-            onChange={(e) => handleChange('starRating', e.target.value ? Number(e.target.value) : undefined)}
+            value={local.starRating?.toString() || ''}
+            onChange={(e) => update('starRating', e.target.value ? Number(e.target.value) : undefined)}
           />
           <div className="grid grid-cols-2 gap-2">
             <Input
               label="Min Price/Night"
               type="number"
               placeholder="$0"
-              value={filters.minPricePerNight || ''}
-              onChange={(e) => handleChange('minPricePerNight', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.minPricePerNight || ''}
+              onChange={(e) => update('minPricePerNight', e.target.value ? Number(e.target.value) : undefined)}
             />
             <Input
               label="Max Price/Night"
               type="number"
               placeholder="$9999"
-              value={filters.maxPricePerNight || ''}
-              onChange={(e) => handleChange('maxPricePerNight', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.maxPricePerNight || ''}
+              onChange={(e) => update('maxPricePerNight', e.target.value ? Number(e.target.value) : undefined)}
             />
           </div>
         </>
@@ -146,23 +160,23 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
           <Input
             label="Destination"
             placeholder="Tour destination"
-            value={filters.tourDestination || ''}
-            onChange={(e) => handleChange('tourDestination', e.target.value)}
+            value={local.tourDestination || ''}
+            onChange={(e) => update('tourDestination', e.target.value)}
           />
           <div className="grid grid-cols-2 gap-2">
             <Input
               label="Min Duration (days)"
               type="number"
               placeholder="1"
-              value={filters.minDuration || ''}
-              onChange={(e) => handleChange('minDuration', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.minDuration || ''}
+              onChange={(e) => update('minDuration', e.target.value ? Number(e.target.value) : undefined)}
             />
             <Input
               label="Max Duration (days)"
               type="number"
               placeholder="30"
-              value={filters.maxDuration || ''}
-              onChange={(e) => handleChange('maxDuration', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.maxDuration || ''}
+              onChange={(e) => update('maxDuration', e.target.value ? Number(e.target.value) : undefined)}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -170,22 +184,22 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
               label="Min Price"
               type="number"
               placeholder="$0"
-              value={filters.tourMinPrice || ''}
-              onChange={(e) => handleChange('tourMinPrice', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.tourMinPrice || ''}
+              onChange={(e) => update('tourMinPrice', e.target.value ? Number(e.target.value) : undefined)}
             />
             <Input
               label="Max Price"
               type="number"
               placeholder="$9999"
-              value={filters.tourMaxPrice || ''}
-              onChange={(e) => handleChange('tourMaxPrice', e.target.value ? Number(e.target.value) : undefined)}
+              value={local.tourMaxPrice || ''}
+              onChange={(e) => update('tourMaxPrice', e.target.value ? Number(e.target.value) : undefined)}
             />
           </div>
         </>
       )}
 
       <div className="flex gap-2 pt-2">
-        <Button variant="primary" onClick={() => onChange(filters)} fullWidth>
+        <Button variant="primary" onClick={handleApply} fullWidth>
           Apply Filters
         </Button>
         <Button variant="outline" onClick={handleReset}>

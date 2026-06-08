@@ -10,6 +10,7 @@
     "test": "jest",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "seed": "tsx src/seed.ts",
     "db:seed": "tsx src/seed.ts"
   },
   "dependencies": {

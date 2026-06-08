@@ -6,12 +6,13 @@ import type { PaginatedApiResponse, Flight, Hotel, Tour } from '@/types';
 
 
 interface AutocompleteInputProps {
-  label: string;
+  label?: string;
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
   endpoint: '/flights' | '/hotels' | '/tours';
   field: string;
+  apiParam?: string;
 }
 
 export default function AutocompleteInput({
@@ -21,13 +22,14 @@ export default function AutocompleteInput({
   onChange,
   endpoint,
   field,
+  apiParam,
 }: AutocompleteInputProps) {
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const ref = useRef<HTMLDivElement>(null);
-  const inputId = label.toLowerCase().replace(/\s+/g, '-');
+  const inputId = label ? label.toLowerCase().replace(/\s+/g, '-') : 'autocomplete-input';
 
   useEffect(() => {
     if (!value || value.length < 1) { setSuggestions([]); return; }
@@ -36,7 +38,7 @@ export default function AutocompleteInput({
       setLoading(true);
       try {
         const data = await get<PaginatedApiResponse<Flight | Hotel | Tour>>(endpoint, {
-          [field]: value,
+          [apiParam || field]: value,
           limit: 10,
         });
         const unique = [...new Set(data.data.map((item) => {
@@ -60,9 +62,11 @@ export default function AutocompleteInput({
 
   return (
     <div className="w-full relative" ref={ref}>
-      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+      )}
       <input
         id={inputId}
         type="text"

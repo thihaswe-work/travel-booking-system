@@ -21,11 +21,39 @@ export default function SearchView({ type }: SearchViewProps) {
   const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const camelToSnake = (key: string): string => {
+    const map: Record<string, string> = {
+      departureCity: 'departure_city',
+      arrivalCity: 'arrival_city',
+      departureDate: 'date',
+      seatClass: 'seat_class',
+      minPrice: 'min_price',
+      maxPrice: 'max_price',
+      destination: 'search',
+      checkIn: 'check_in',
+      checkOut: 'check_out',
+      guests: 'guests',
+      starRating: 'min_rating',
+      minPricePerNight: 'min_price_per_night',
+      maxPricePerNight: 'max_price',
+      tourDestination: 'search',
+      minDuration: 'min_duration',
+      maxDuration: 'max_duration',
+      tourMinPrice: 'min_price',
+      tourMaxPrice: 'max_price',
+    };
+    return map[key] || key;
+  };
+
   const doFetch = useCallback(async (f: SearchFiltersType, page: string) => {
     setLoading(true);
     try {
-      const apiFilters: Record<string, unknown> = { ...f };
-      delete apiFilters.page;
+      const apiFilters: Record<string, unknown> = {};
+      Object.entries(f).forEach(([key, value]) => {
+        if (key !== 'page' && value !== undefined && value !== '') {
+          apiFilters[camelToSnake(key)] = value;
+        }
+      });
       const params = { ...apiFilters, page, limit: 10 };
       const endpoint = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
       const data = await get<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour>>(endpoint, params);

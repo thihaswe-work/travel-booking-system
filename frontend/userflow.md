@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                        PUBLIC ROUTES                            │
 ├──────────────┬──────────────┬──────────────┬────────────────────┤
-│   Landing    │   Browse     │   Auth       │  Search            │
+│   Landing    │   Browse     │   Auth       │  Search (legacy)   │
 │   /          │ /flights     │ /login       │  /search           │
 │              │ /hotels      │ /register    │                    │
 │              │ /tours       │              │                    │
@@ -26,6 +26,8 @@
 └──────────────┴──────────┴──────────┴──────────┴──────────┴─────┘
 ```
 
+Clean routes `/flights`, `/hotels`, `/tours` each use the shared `SearchView` component with type-specific filters.
+
 ---
 
 ## 2. Guest User Flow (Not Logged In)
@@ -34,6 +36,10 @@
                      ┌──────────────┐
                      │   Landing    │
                      │   Page (/)   │
+                     │  - Flight    │
+                     │    search    │
+                     │    with      │
+                     │  autocomplete│
                      └──────┬───────┘
                             │
             ┌───────────────┼───────────────┐
@@ -47,10 +53,11 @@
           │   │                         │
           ▼   ▼                         ▼
      ┌─────────────────────────────────────┐
-     │         Search / Results             │
-     │  (SearchView shared component)       │
-     │  - Filter by destination, price, etc │
-     │  - Paginated results                 │
+     │         SearchView                   │
+     │  - Filters (local state)            │
+     │  - Autocomplete on city/hotel/tour  │
+     │  - "Apply Filters" button           │
+     │  - Results keep visible on refetch  │
      └──────┬──────────────────────────┬────┘
             │                          │
             ▼                          ▼
@@ -106,9 +113,9 @@
                     │  - Cancel option      │
                     └──────────────────────┘
 
-    ┌──────────────────┬──────────────────────┬─────────────────┐
-    │                  │                      │                 │
-    ▼                  ▼                      ▼                 ▼
+   ┌──────────────────┬──────────────────────┬─────────────────┐
+   │                  │                      │                 │
+   ▼                  ▼                      ▼                 ▼
 ┌──────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
 │  Profile │   │ My Bookings  │   │ Notifications│   │   Logout     │
 │ /profile │   │/profile/     │   │/notifications│   │              │
@@ -131,7 +138,8 @@
                     │  - Total bookings      │
                     │  - Revenue overview    │
                     │  - Popular destinations│
-                    │  - Recent bookings     │
+                    │  - Bookings/revenue    │
+                    │    trends              │
                     └──────┬─────────────────┘
                            │
           ┌────────────────┼──────────────────┬──────────────┐
@@ -142,7 +150,7 @@
    │ users    │    │ flights  │     │ hotels   │    │ tours    │
    └──────────┘    └──────────┘     └──────────┘    └──────────┘
                                                          │
-          ┌───────────────────────────────────────────────┘
+          ┌──────────────────────────────────────────────┘
           │
    ┌──────────┐    ┌──────────────┐
    │ Bookings │    │ Destinations │
@@ -153,10 +161,10 @@
    Each CRUD page provides:
    ┌──────────────────────────────────┐
    │  + Add New button                │
-   │  - Table with sortable columns   │
+   │  - Table with columns            │
    │  - Click row to edit             │
-   │  - Pagination                    │
    │  - Delete with confirmation      │
+   │  - Pagination                    │
    └──────────────────────────────────┘
 ```
 
@@ -226,8 +234,9 @@ Authentication flow:
     │                        │── verify password ──►│
     │                        │◄── user data ────────│
     │◄── { accessToken,     │                      │
-    │      refreshToken     │                      │
-    │      (httpOnly cookie)}│                      │
+    │      user }            │                      │
+    │◄── httpOnly cookie     │                      │
+    │    (refreshToken)      │                      │
     │                        │                      │
     │── GET /users/me ──────►│                      │
     │   (Authorization: Bearer <token>)             │
@@ -245,6 +254,17 @@ Booking flow (transactional):
     │                     │── create payment ───────►│
     │                     │── COMMIT ───────────────►│
     │◄── booking ────────│                          │
+
+Search flow with autocomplete:
+    │                     │                          │
+    │── GET /flights?departure_city=New ────────────►│
+    │   (autocomplete debounced 250ms)               │
+    │◄── matched flights ───────────────────────────│
+    │   (suggestions extracted: unique cities)       │
+    │                     │                          │
+    │── GET /flights?departure_city=New+York ───────►│
+    │   (actual search on apply)                     │
+    │◄── paginated results ─────────────────────────│
 ```
 
 ---
@@ -253,11 +273,11 @@ Booking flow (transactional):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  [TA]  TravelAgent    Home  Flights  Hotels  Tours         │
-│                              ▼       ▼       ▼             │
-│                         /flights /hotels /tours            │
-│                         (search  (search  (search          │
-│                          flights)  hotels)  tours)         │
+│  [✈]  TravelAgent    Home  Flights  Hotels  Tours          │
+│                              ▼       ▼       ▼              │
+│                         /flights /hotels /tours             │
+│                         (search  (search  (search           │
+│                          flights)  hotels)  tours)          │
 │                                                             │
 │              [Not logged in]       [Logged in]              │
 │              ┌─────────┐          ┌─────────┐              │
@@ -265,9 +285,24 @@ Booking flow (transactional):
 │              │ Register│          │ ┌─────────────┐        │
 │              └─────────┘          │ │ Profile     │        │
 │                                   │ │ My Bookings │        │
+│                                   │ │ ─────────── │        │
 │                                   │ │ Admin Panel │        │
+│                                   │ │ (if admin)  │        │
 │                                   │ │ ─────────── │        │
 │                                   │ │ Logout      │        │
 │                                   │ └─────────────┘        │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 8. Autocomplete Fields
+
+| Page | Fields | Suggests from |
+|------|--------|---------------|
+| Home (/) | Flight From/To, Hotel Destination, Tour Destination | API search with 250ms debounce |
+| /flights | From, To | `departureCity` / `arrivalCity` from flight records |
+| /hotels | Destination | `name` from hotel records via `search` param |
+| /tours | Destination | `name` from tour records via `search` param |
+
+All other inputs (date, number, select, price range) are manual entry.

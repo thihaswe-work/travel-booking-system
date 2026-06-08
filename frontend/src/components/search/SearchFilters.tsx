@@ -65,6 +65,7 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
             onChange={(v) => update('departureCity', v)}
             endpoint="/flights"
             field="departureCity"
+            apiParam="departure_city"
           />
           <AutocompleteInput
             label="To"
@@ -73,6 +74,7 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
             onChange={(v) => update('arrivalCity', v)}
             endpoint="/flights"
             field="arrivalCity"
+            apiParam="arrival_city"
           />
           <Input
             label="Departure Date"
@@ -114,7 +116,8 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
             value={local.destination || ''}
             onChange={(v) => update('destination', v)}
             endpoint="/hotels"
-            field="destination"
+            field="name"
+            apiParam="search"
           />
           <Input
             label="Check-in"
@@ -170,7 +173,8 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
             value={local.tourDestination || ''}
             onChange={(v) => update('tourDestination', v)}
             endpoint="/tours"
-            field="tourDestination"
+            field="name"
+            apiParam="search"
           />
           <div className="grid grid-cols-2 gap-2">
             <Input

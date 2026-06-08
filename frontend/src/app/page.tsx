@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
+import AutocompleteInput from '@/components/ui/AutocompleteInput';
 import { Plane, Building2, Compass, Search, Shield, Clock, CreditCard, ArrowRight, Star } from 'lucide-react';
 
 const tabs = [
@@ -109,15 +110,21 @@ export default function HomePage() {
               <div className="p-4">
                 {activeTab === 'flights' && (
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
+                    <AutocompleteInput
                       placeholder="From (city)"
                       value={flightSearch.from}
-                      onChange={(e) => setFlightSearch({ ...flightSearch, from: e.target.value })}
+                      onChange={(v) => setFlightSearch({ ...flightSearch, from: v })}
+                      endpoint="/flights"
+                      field="departureCity"
+                      apiParam="departure_city"
                     />
-                    <Input
+                    <AutocompleteInput
                       placeholder="To (city)"
                       value={flightSearch.to}
-                      onChange={(e) => setFlightSearch({ ...flightSearch, to: e.target.value })}
+                      onChange={(v) => setFlightSearch({ ...flightSearch, to: v })}
+                      endpoint="/flights"
+                      field="arrivalCity"
+                      apiParam="arrival_city"
                     />
                     <Input
                       type="date"
@@ -132,10 +139,13 @@ export default function HomePage() {
 
                 {activeTab === 'hotels' && (
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
+                    <AutocompleteInput
                       placeholder="Destination"
                       value={hotelSearch.destination}
-                      onChange={(e) => setHotelSearch({ ...hotelSearch, destination: e.target.value })}
+                      onChange={(v) => setHotelSearch({ ...hotelSearch, destination: v })}
+                      endpoint="/hotels"
+                      field="name"
+                      apiParam="search"
                     />
                     <Input
                       type="date"
@@ -165,10 +175,13 @@ export default function HomePage() {
 
                 {activeTab === 'tours' && (
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Input
+                    <AutocompleteInput
                       placeholder="Destination"
                       value={tourSearch.destination}
-                      onChange={(e) => setTourSearch({ ...tourSearch, destination: e.target.value })}
+                      onChange={(v) => setTourSearch({ ...tourSearch, destination: v })}
+                      endpoint="/tours"
+                      field="name"
+                      apiParam="search"
                     />
                     <Select
                       options={[

@@ -95,7 +95,7 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Passengers</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Passengers</h3>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -105,7 +105,7 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
           >
             <Minus className="w-4 h-4" />
           </Button>
-          <span className="text-sm font-medium text-gray-700 w-8 text-center">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-8 text-center">
             {passengerCount}
           </span>
           <Button
@@ -134,11 +134,11 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
       {passengers.map((passenger, index) => (
         <div
           key={index}
-          className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+          className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
         >
           <div className="flex items-center gap-2 mb-3">
-            <User className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
+            <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Passenger {index + 1}
             </span>
           </div>
@@ -171,12 +171,12 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
         </div>
       ))}
 
-      <div className="bg-primary-50 rounded-lg p-4 border border-primary-200">
+      <div className="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-4 border border-primary-200 dark:border-primary-800">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
             {formatCurrency(getPriceForClass(seatClass))} x {passengerCount} passenger{passengerCount > 1 ? 's' : ''}
           </span>
-          <span className="text-xl font-bold text-primary-700">
+          <span className="text-xl font-bold text-primary-700 dark:text-primary-300">
             {formatCurrency(totalPrice)}
           </span>
         </div>

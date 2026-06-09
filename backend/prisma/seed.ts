@@ -20,6 +20,7 @@ async function main() {
   await prisma.flight.deleteMany();
   await prisma.hotel.deleteMany();
   await prisma.destination.deleteMany();
+  await prisma.apiKey.deleteMany();
   await prisma.user.deleteMany();
 
   const passwordHash = await bcrypt.hash('Password123!', 12);

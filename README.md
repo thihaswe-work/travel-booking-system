@@ -46,7 +46,7 @@ npm run dev          # Starts on port 3000
 
 ## Documentation
 
-- **[Backend API Docs](backend/documentation.md)** — All 50+ endpoints with request/response shapes
+- **[Backend API Docs](backend/documentation.md)** — All 60+ endpoints with request/response shapes
 - **[User Flow Diagrams](frontend/userflow.md)** — Site architecture, guest/auth/admin flows, payment flow
 - **[Technical Spec](TRAVEL_BOOKING_SYSTEM_SPEC.md)** — Original specification with implementation status
 
@@ -58,8 +58,8 @@ npm run dev          # Starts on port 3000
 ### Protected (login required)
 `/booking/checkout/[id]` — booking flow; `/booking/[id]` — confirmation; `/profile` — settings; `/profile/bookings` — my bookings; `/notifications`
 
-### Admin (admin role only)
-`/admin` — analytics dashboard; `/admin/bookings`, `/admin/flights`, `/admin/hotels`, `/admin/tours`, `/admin/destinations`, `/admin/users` — CRUD management
+### Admin / Agent
+`/admin` — analytics dashboard; `/admin/bookings`, `/admin/flights`, `/admin/hotels`, `/admin/tours` — CRUD (admin+agent); `/admin/destinations`, `/admin/users` — CRUD (admin only); `/admin/api-keys` — API Integration (keys + documentation tab)
 
 ## Key Features
 
@@ -71,3 +71,10 @@ npm run dev          # Starts on port 3000
 - In-app notifications
 - Admin analytics (bookings/revenue trends, popular destinations)
 - Full CRUD management for all entities
+- Agent trust tier system (new → trusted after 5 approved items)
+- SeatEditor/RoomEditor components for flight seat class and hotel room management
+- API key system for third-party integration (ta_ prefixed, sha256 hashed)
+- Public API endpoints (/public/*) with X-API-Key authentication
+- File upload (images, multer-based) with proper error handling
+- ConfirmDialog component for destructive action confirmation
+- API Integration page with live documentation and code examples (JS/Python/cURL)

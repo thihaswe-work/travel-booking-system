@@ -108,20 +108,22 @@ analytics_daily (denormalized aggregation table)
 > **Note:** The actual implementation uses Prisma's auto-generated UUIDs and snake_case DB column names via `@map()`. All code-level field names are **camelCase**.
 
 #### `users` ✅
-| Column        | Type         | Constraints                  |
-|---------------|--------------|------------------------------|
-| id            | UUID         | PK                           |
-| email         | VARCHAR(255) | UNIQUE, NOT NULL, INDEX      |
-| password_hash | VARCHAR(255) | NOT NULL                     |
-| role          | ENUM         | customer, travel_agent, admin|
-| first_name    | VARCHAR(100) | NOT NULL                     |
-| last_name     | VARCHAR(100) | NOT NULL                     |
-| phone         | VARCHAR(20)  |                              |
-| preferences   | JSONB        | DEFAULT '{}'                 |
-| is_active     | BOOLEAN      | DEFAULT true                 |
-| refresh_token | TEXT         |                              |
-| created_at    | TIMESTAMPTZ  | DEFAULT NOW()                |
-| updated_at    | TIMESTAMPTZ  | DEFAULT NOW()                |
+| Column               | Type         | Constraints                  |
+|----------------------|--------------|------------------------------|
+| id                   | UUID         | PK                           |
+| email                | VARCHAR(255) | UNIQUE, NOT NULL, INDEX      |
+| password_hash        | VARCHAR(255) | NOT NULL                     |
+| role                 | ENUM         | customer, travel_agent, admin|
+| first_name           | VARCHAR(100) | NOT NULL                     |
+| last_name            | VARCHAR(100) | NOT NULL                     |
+| phone                | VARCHAR(20)  |                              |
+| preferences          | JSONB        | DEFAULT '{}'                 |
+| is_active            | BOOLEAN      | DEFAULT true                 |
+| trust_level          | ENUM?        | new, trusted (agent only)    |
+| approved_items_count | INTEGER?     | Default 0                    |
+| refresh_token        | TEXT         |                              |
+| created_at           | TIMESTAMPTZ  | DEFAULT NOW()                |
+| updated_at           | TIMESTAMPTZ  | DEFAULT NOW()                |
 
 **Indexes:** `email` (unique), `role`
 
@@ -281,6 +283,21 @@ analytics_daily (denormalized aggregation table)
 | created_at     | TIMESTAMPTZ   | DEFAULT NOW()                  |
 
 **Indexes:** `booking_id`, `invoice_number` (unique), `payment_status`
+
+#### `api_keys` ✅
+| Column        | Type         | Constraints                    |
+|---------------|--------------|--------------------------------|
+| id            | UUID         | PK                             |
+| user_id       | UUID         | FK → users.id                  |
+| name          | VARCHAR(100) | NOT NULL                       |
+| key_hash      | VARCHAR(64)  | UNIQUE, NOT NULL               |
+| key_prefix    | VARCHAR(10)  | NOT NULL                       |
+| is_active     | BOOLEAN      | DEFAULT true                   |
+| last_used_at  | TIMESTAMPTZ  |                                |
+| expires_at    | TIMESTAMPTZ  |                                |
+| created_at    | TIMESTAMPTZ  | DEFAULT NOW()                  |
+
+**Indexes:** `key_hash` (unique), `user_id`, `is_active`
 
 #### `notifications` ✅
 | Column     | Type         | Constraints                    |
@@ -449,7 +466,8 @@ Base URL: `/api/v1`
 
 | Method | Endpoint              | Description              | Auth       |
 |--------|-----------------------|--------------------------|------------|
-| GET    | /flights              | Search flights           | No         |
+| GET    | /flights              | Search flights (public)  | No         |
+| GET    | /flights/all          | List all (incl. pending) | Admin/Agent|
 | GET    | /flights/:id          | Get flight details       | No         |
 | POST   | /flights              | Create flight            | Admin/Agent|
 | PUT    | /flights/:id          | Update flight            | Admin/Agent|
@@ -487,7 +505,8 @@ Base URL: `/api/v1`
 
 | Method | Endpoint                | Description               | Auth       |
 |--------|-------------------------|---------------------------|------------|
-| GET    | /hotels                 | Search hotels             | No         |
+| GET    | /hotels                 | Search hotels (public)    | No         |
+| GET    | /hotels/all             | List all (incl. pending)  | Admin/Agent|
 | GET    | /hotels/:id             | Get hotel details+rooms   | No         |
 | POST   | /hotels                 | Create hotel              | Admin/Agent|
 | PUT    | /hotels/:id             | Update hotel              | Admin/Agent|
@@ -499,7 +518,8 @@ Base URL: `/api/v1`
 
 | Method | Endpoint              | Description              | Auth       |
 |--------|-----------------------|--------------------------|------------|
-| GET    | /tours                | Search tours             | No         |
+| GET    | /tours                | Search tours (public)    | No         |
+| GET    | /tours/all            | List all (incl. pending) | Admin/Agent|
 | GET    | /tours/:id            | Get tour details         | No         |
 | POST   | /tours                | Create tour              | Admin/Agent|
 | PUT    | /tours/:id            | Update tour              | Admin/Agent|
@@ -534,13 +554,36 @@ Base URL: `/api/v1`
 | GET    | /admin/analytics/revenue       | Revenue over time            | Admin |
 | GET    | /admin/analytics/popular       | Popular destinations         | Admin |
 
+### API Keys ✅
+
+| Method | Endpoint          | Description              | Auth       |
+|--------|-------------------|--------------------------|------------|
+| POST   | /api-keys         | Generate API key         | Admin/Agent|
+| GET    | /api-keys         | List user's API keys     | Admin/Agent|
+| PUT    | /api-keys/:id     | Update key (name/active) | Admin/Agent|
+| DELETE | /api-keys/:id     | Revoke key               | Admin/Agent|
+
+Keys are prefixed `ta_`, hashed with sha256. Plain key shown once at creation.
+
+### Public API (Third-Party) ✅
+
+| Method | Endpoint                   | Description              | Auth     |
+|--------|----------------------------|--------------------------|----------|
+| GET    | /public/destinations       | List destinations        | API key  |
+| GET    | /public/flights            | List flights             | API key  |
+| GET    | /public/hotels             | List hotels              | API key  |
+| GET    | /public/tours              | List tours               | API key  |
+| GET    | /public/bookings           | List bookings            | API key  |
+
+All require `X-API-Key` header. Supports pagination on list endpoints.
+
 ### File Upload ✅
 
 | Method | Endpoint          | Description              | Auth       |
 |--------|-------------------|--------------------------|------------|
 | POST   | /upload           | Upload image             | Admin/Agent|
 
-Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`.
+Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`. Multer errors return proper 400 status codes.
 
 ### Notifications ✅ (all implemented)
 
@@ -769,6 +812,9 @@ frontend/
 - [x] XSS: React auto-escapes
 - [x] Rate limiting: 100 req/min per IP (general), 100 req/min (auth)
 - [x] Role-based access: middleware enforces route-level guards
+- [x] API key hashing: sha256 (not bcrypt — fast lookup)
+- [x] API key prefix: `ta_` for easy identification
+- [x] Multer error handling: returns 400 instead of 500
 - [ ] 📝 CSRF: SameSite cookies (partial)
 - [ ] 📝 Inventory race conditions: row-level locking (transaction only, no explicit FOR UPDATE)
 - [ ] 📝 Audit logging: not implemented
@@ -820,12 +866,16 @@ frontend/
 | **Phase 6: Admin Dashboard** | Analytics, CRUD management, user/booking admin | ✅ Complete |
 | **Phase 7: Notifications** | In-app notification system, mark read | ✅ Complete |
 | **Phase 8: Polish** | Seed script, documentation, autocomplete, filter fixes | ✅ Complete |
+| **Phase 9: Agent System** | createdById, agent approval flow, trust tiers (new/trusted) | ✅ Complete |
+| **Phase 10: Flight Seats & Hotel Rooms** | FlightSeat model, SeatEditor, RoomEditor, pricePerNight | ✅ Complete |
+| **Phase 11: API Integration** | ApiKey model, public endpoints, API Integration page with live docs | ✅ Complete |
+| **Phase 12: UX Polish** | ConfirmDialog, status dropdown, multer error handling, logout confirm | ✅ Complete |
 
 ---
 
 ## 8. Prisma Schema (Quick Reference) ✅
 
-See [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) for the authoritative schema. All 13 models are implemented matching the table definitions in Section 2 above.
+See [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) for the authoritative schema. All **16 models** are implemented: User, Destination, Flight, FlightSeat, Hotel, HotelRoom, Tour, Booking, BookingDetail, BookingPassenger, Payment, Notification, AnalyticsDaily, ApiKey, Review, Favorite.
 
 ---
 

@@ -18,15 +18,29 @@
 │              │ bookings     │ checkout/[id]    │               │
 │              │ /booking/[id]│                  │               │
 ├──────────────┴──────────────┴──────────────────┴───────────────┤
-│                      ADMIN ROUTES (admin only)                  │
+│                      ADMIN / AGENT ROUTES                         │
 ├──────────────┬──────────┬──────────┬──────────┬──────────┬─────┤
 │ Dashboard    │ Flights  │ Hotels   │ Tours    │ Bookings │ ... │
 │ /admin       │/admin/   │ /admin/  │ /admin/  │ /admin/  │     │
 │              │ flights  │ hotels   │ tours    │ bookings │     │
-└──────────────┴──────────┴──────────┴──────────┴──────────┴─────┘
+├──────────────┴──────────┴──────────┴──────────┴──────────┴─────┤
+│ AGENT + ADMIN: /admin/flights, /admin/hotels, /admin/tours,    │
+│                /admin/bookings, /admin/api-keys                 │
+│ ADMIN ONLY:    /admin/users, /admin/destinations               │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 Clean routes `/flights`, `/hotels`, `/tours` each use the shared `SearchView` component with type-specific filters.
+
+### API Integration Page (`/admin/api-keys`)
+
+Two-tab layout:
+- **Keys tab** — generate, list, revoke API keys (ta_ prefixed, shown once)
+- **Integration Guide tab** — collapsible sections:
+  - Getting Started (generate → header → response)
+  - API Endpoints (all 5 public endpoints with method/path/params)
+  - Code Examples (JavaScript/Fetch, Python/requests, cURL)
+  - Best Practices (security, rotation, naming, error handling)
 
 ---
 
@@ -163,10 +177,15 @@ Clean routes `/flights`, `/hotels`, `/tours` each use the shared `SearchView` co
    │  + Add New button                │
    │  - Table with columns            │
    │  - Click row to edit             │
-   │  - Approve/Deactivate buttons    │
+   │  - Status dropdown (Active/      │
+   │    Pending) with ConfirmDialog   │
    │  - Delete with confirmation      │
    │  - Pagination                    │
    └──────────────────────────────────┘
+
+   Flights use SeatEditor (add/remove seat classes)
+   Hotels use RoomEditor (add/remove room types)
+   Both use useMemo to prevent form reset on re-render
 ```
 
 ## 4a. Agent Flow
@@ -178,18 +197,30 @@ Clean routes `/flights`, `/hotels`, `/tours` each use the shared `SearchView` co
    │                                        │
    │  - Create flights/hotels/tours         │
    │    → isActive = false (Pending)        │
+   │    (unless trustLevel = trusted)       │
    │  - Edit own items only                 │
    │  - Deactivate own items only           │
    │  - View own items in admin tables      │
+   │  - API Integration page for third-     │
+   │    party key management + docs         │
    └────────────────────────────────────────┘
 
-   Admin must approve agent-created items:
+   Agent Trust Tiers:
    ┌────────────────────────────────────────┐
-   │  Admin approves: PATCH /:id/approve    │
-   │  Admin deactivates any: PATCH /:id/    │
-   │    deactivate                          │
-   │  Admin bans agents: PATCH /users/:id   │
-   │    { "isActive": false }               │
+   │  new:      Items need admin approval   │
+   │  trusted:  Items auto-active           │
+   │                                        │
+   │  Auto-upgrade at 5 approved items      │
+   └────────────────────────────────────────┘
+
+   Admin management:
+   ┌────────────────────────────────────────┐
+   │  Approve: PATCH /:id/approve           │
+   │  Deactivate: PATCH /:id/deactivate     │
+   │  Ban: PATCH /users/:id {isActive:false}│
+   │  Status dropdown replaces separate     │
+   │    Approve/Deactivate buttons          │
+   │  ConfirmDialog on status change        │
    └────────────────────────────────────────┘
 ```
 
@@ -314,7 +345,8 @@ Search flow with autocomplete:
 │                                   │ │ Admin Panel │        │
 │                                   │ │ (if admin)  │        │
 │                                   │ │ ─────────── │        │
-│                                   │ │ Logout      │        │
+│                                   │ │ Logout (with│        │
+│                                   │ │  confirm)   │        │
 │                                   │ └─────────────┘        │
 └─────────────────────────────────────────────────────────────┘
 ```

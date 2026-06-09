@@ -7,7 +7,7 @@ Express.js + TypeScript + Prisma REST API for a travel booking platform. Postgre
 | Property | Value |
 |---|---|
 | Base URL | `http://localhost:4000/api/v1` |
-| Auth | JWT access tokens + httpOnly refresh cookies |
+| Auth | JWT access tokens + httpOnly refresh cookies + API key (public) |
 | Validation | Zod schemas on all inputs |
 | Response format | `{ success, data?, pagination?, message?, error? }` |
 
@@ -177,6 +177,16 @@ Admin only. Can update any profile field plus `role` and `isActive`.
 { "isActive": true, "role": "travel_agent" }
 ```
 
+### Agent Trust Tiers
+
+Users with role `travel_agent` have a `trustLevel` field (`new` or `trusted`) and an `approvedItemsCount`.
+
+- **New agents:** Items they create are set to `isActive: false` (pending admin approval) until they reach 5 approved items.
+- **Trusted agents:** Items they create are immediately active (skips approval).
+- **Auto-upgrade:** When an admin approves an agent's item, `approvedItemsCount` increments. At 5, the agent auto-upgrades to `trusted` and all their pending items are automatically approved.
+
+The `trustLevel` and `approvedItemsCount` are included in JWT payloads and API responses.
+
 ---
 
 ## File Upload
@@ -204,6 +214,118 @@ Auth required (admin or agent). Multipart form-data with field `file`.
 ```
 
 Returns an absolute URL. Files stored in `backend/uploads/` and served at `/uploads`.
+
+**Multer errors** (file type rejection, file too large) return 400 with `UPLOAD_ERROR` or `INVALID_FILE_TYPE` codes.
+
+---
+
+## API Keys
+
+Travel agents and admins can generate API keys for third-party integration. Keys are prefixed with `ta_`, hashed with sha256, and stored as hashes. The plain key is only shown once at creation.
+
+### Generate API Key
+
+```
+POST /api-keys
+```
+
+Auth required (admin or travel_agent).
+
+```json
+// Request
+{ "name": "Production API Key" }
+
+// Response 201
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "Production API Key",
+    "keyPrefix": "ta_",
+    "isActive": true,
+    "createdAt": "2026-06-09T12:00:00Z",
+    "plainKey": "ta_b1v6FN2E9ru8D9d1Z69V02kQw...only shown once"
+  }
+}
+```
+
+### List API Keys
+
+```
+GET /api-keys
+```
+
+Auth required. Returns the user's keys (no hashes/plain keys).
+
+### Update API Key
+
+```
+PUT /api-keys/:id
+```
+
+Auth required (owner only). Can update `name` or `isActive`.
+
+### Revoke API Key
+
+```
+DELETE /api-keys/:id
+```
+
+Auth required (owner only). Sets `isActive = false`. Revoked keys are rejected by the public API.
+
+---
+
+## Public API (Third-Party Integration)
+
+All public endpoints require an API key sent via the `X-API-Key` header (or `Authorization: Bearer`).
+
+**Base URL:** `http://localhost:4000/api/v1/public`
+
+### List Destinations
+
+```
+GET /public/destinations
+```
+
+Returns all active destinations. Supports no pagination.
+
+### List Flights
+
+```
+GET /public/flights
+```
+
+**Query params:** `destination_id`, `page`, `limit`. Returns active flights with destination and seat classes.
+
+### List Hotels
+
+```
+GET /public/hotels
+```
+
+**Query params:** `destination_id`, `page`, `limit`. Returns active hotels with destination and rooms.
+
+### List Tours
+
+```
+GET /public/tours
+```
+
+**Query params:** `destination_id`, `page`, `limit`. Returns active tours with destination.
+
+### List Bookings
+
+```
+GET /public/bookings
+```
+
+**Query params:** `status`, `page`, `limit`. Returns bookings associated with the API key owner.
+
+### cURL Example
+
+```bash
+curl -H "X-API-Key: ta_your_key_here" http://localhost:4000/api/v1/public/destinations
+```
 
 ---
 
@@ -731,6 +853,8 @@ GET /admin/analytics/popular
 | phone | string? | |
 | preferences | object? | `{ currency, language, notifications }` |
 | isActive | boolean | Default: true |
+| trustLevel | enum? | `new`, `trusted` (travel_agent only) |
+| approvedItemsCount | int? | Auto-incremented on admin approval |
 
 ### Destination
 
@@ -881,6 +1005,21 @@ Unique constraint on `(flightId, seatClass)` — max 3 seat classes per flight.
 | message | text |
 | isRead | boolean |
 
+### ApiKey
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| userId | UUID | FK → User (owner) |
+| name | string | Descriptive label |
+| keyHash | string | sha256 hash of the plain key |
+| keyPrefix | string | `ta_` |
+| isActive | boolean | Default: true |
+| lastUsedAt | datetime? | Updated on each public API call |
+| expiresAt | datetime? | Optional expiry |
+
+Unique on `keyHash`. The opposite relation `user.apiKeys` is also defined.
+
 ---
 
 ## Common Errors
@@ -961,7 +1100,7 @@ Seeded via `prisma/seed.ts`. Run `npm run seed` after migrations. Clears all exi
 6. URL-encoded parser
 7. Rate limiter — 100 requests/IP/60s
 8. All routes at `/api/v1`
-9. Global error handler
+9. Global error handler (handles AppError, ZodError, Prisma errors, MulterError)
 
 ---
 

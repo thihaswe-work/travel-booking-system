@@ -45,7 +45,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
           </div>
 
           <div className="flex flex-col items-center px-4">
-            <span className="text-xs text-gray-500">{depTime}</span>
+            <span className="text-xs text-gray-500">{flight.departureCity}</span>
             <div className="relative w-20 lg:w-32">
               <div className="border-t border-gray-300 w-full" />
               <Plane className="w-3.5 h-3.5 text-primary-500 absolute -top-2 right-0 rotate-90" />
@@ -54,6 +54,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
               <Clock className="w-3 h-3" />
               {hours}h {mins}m
             </div>
+            <span className="text-xs text-gray-500 mt-1">{flight.arrivalCity}</span>
           </div>
 
           <div className="text-center">

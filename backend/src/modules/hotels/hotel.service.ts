@@ -64,6 +64,67 @@ export async function list(filters: ListFilters, query: { page?: string; limit?:
   return { data, pagination: getPaginationMeta(total, page, limit) };
 }
 
+export async function adminList(
+  filters: { destinationId?: string; minRating?: number; maxPrice?: number; search?: string; sort?: string },
+  query: { page?: string; limit?: string },
+  user: { id: string; role: string },
+) {
+  const { skip, take, page, limit } = getPagination(query);
+
+  const where: Prisma.HotelWhereInput = {};
+
+  if (user.role !== 'admin') {
+    where.createdById = user.id;
+  }
+
+  if (filters.destinationId) {
+    where.destinationId = filters.destinationId;
+  }
+
+  if (filters.minRating) {
+    where.starRating = { gte: filters.minRating };
+  }
+
+  if (filters.search) {
+    where.name = { contains: filters.search, mode: 'insensitive' };
+  }
+
+  if (filters.maxPrice !== undefined) {
+    where.rooms = {
+      some: {
+        isActive: true,
+        pricePerNight: { lte: filters.maxPrice },
+        availableRooms: { gt: 0 },
+      },
+    };
+  }
+
+  const sortField = filters.sort || 'name';
+  const orderBy: Prisma.HotelOrderByWithRelationInput =
+    sortField === 'rating' ? { starRating: 'desc' } :
+    sortField === 'price' ? { starRating: 'desc' } :
+    { name: 'asc' };
+
+  const [data, total] = await Promise.all([
+    prisma.hotel.findMany({
+      where,
+      include: {
+        destination: true,
+        rooms: {
+          where: { isActive: true, availableRooms: { gt: 0 } },
+          orderBy: { pricePerNight: 'asc' },
+        },
+      },
+      orderBy,
+      skip,
+      take,
+    }),
+    prisma.hotel.count({ where }),
+  ]);
+
+  return { data, pagination: getPaginationMeta(total, page, limit) };
+}
+
 export async function getById(id: string) {
   const hotel = await prisma.hotel.findUnique({
     where: { id },
@@ -88,8 +149,10 @@ export async function create(data: {
   name: string;
   address?: string;
   starRating: number;
+  pricePerNight: number;
   description?: string;
   imageUrl?: string;
+  createdById?: string;
   rooms?: Array<{
     roomType: string;
     pricePerNight: number;
@@ -133,8 +196,17 @@ export async function update(
     name: string;
     address: string;
     starRating: number;
+    pricePerNight: number;
     description: string;
     imageUrl: string;
+    rooms: Array<{
+      roomType: string;
+      pricePerNight: number;
+      maxGuests: number;
+      totalRooms: number;
+      availableRooms: number;
+      amenities?: unknown;
+    }>;
   }>,
 ) {
   const existing = await prisma.hotel.findUnique({ where: { id } });
@@ -142,14 +214,29 @@ export async function update(
     throw new AppError('Hotel not found', 404, 'NOT_FOUND');
   }
 
+  const { rooms, ...hotelData } = data;
+
+  if (rooms) {
+    await prisma.hotelRoom.deleteMany({ where: { hotelId: id } });
+    await prisma.hotelRoom.createMany({
+      data: rooms.map((r) => ({
+        hotelId: id,
+        roomType: r.roomType,
+        pricePerNight: r.pricePerNight,
+        maxGuests: r.maxGuests,
+        totalRooms: r.totalRooms,
+        availableRooms: r.availableRooms,
+        amenities: r.amenities as any,
+      })),
+    });
+  }
+
   return prisma.hotel.update({
     where: { id },
-    data,
+    data: hotelData,
     include: {
       destination: true,
-      rooms: {
-        where: { isActive: true },
-      },
+      rooms: { where: { isActive: true } },
     },
   });
 }
@@ -166,6 +253,33 @@ export async function softDelete(id: string) {
   });
 
   return prisma.hotel.update({ where: { id }, data: { isActive: false } });
+}
+
+export async function deactivate(id: string, userId: string, userRole: string) {
+  const existing = await prisma.hotel.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Hotel not found', 404, 'NOT_FOUND');
+  }
+  if (userRole !== 'admin' && existing.createdById !== userId) {
+    throw new AppError('Not authorized to deactivate this hotel', 403, 'FORBIDDEN');
+  }
+  return prisma.hotel.update({
+    where: { id },
+    data: { isActive: false },
+    include: { destination: true },
+  });
+}
+
+export async function approve(id: string) {
+  const existing = await prisma.hotel.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Hotel not found', 404, 'NOT_FOUND');
+  }
+  return prisma.hotel.update({
+    where: { id },
+    data: { isActive: true },
+    include: { destination: true },
+  });
 }
 
 export async function getRooms(hotelId: string) {

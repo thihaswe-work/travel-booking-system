@@ -24,7 +24,7 @@ cd backend
 npm install
 # Set up .env (see .env.example)
 npx prisma migrate dev
-npm run seed         # Seeds 3 users, 3 destinations, 9 flights, 6 hotels, 6 tours
+npm run seed         # Seeds 3 users, 3 destinations, 5 flights, 6 hotels, 6 tours
 npm run dev          # Starts on port 4000
 ```
 
@@ -46,7 +46,7 @@ npm run dev          # Starts on port 3000
 
 ## Documentation
 
-- **[Backend API Docs](backend/documentation.md)** — All 47 endpoints with request/response shapes
+- **[Backend API Docs](backend/documentation.md)** — All 50+ endpoints with request/response shapes
 - **[User Flow Diagrams](frontend/userflow.md)** — Site architecture, guest/auth/admin flows, payment flow
 - **[Technical Spec](TRAVEL_BOOKING_SYSTEM_SPEC.md)** — Original specification with implementation status
 

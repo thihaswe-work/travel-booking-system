@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { get, post, patch, del, getApiError } from '@/lib/api';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { get, post, put, patch, del, getApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import Table, { Column } from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
+import SeatEditor, { SeatEntry } from '@/components/admin/SeatEditor';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import type { Flight, PaginatedApiResponse } from '@/types';
@@ -12,25 +15,25 @@ import toast from 'react-hot-toast';
 import { Plane, Plus } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
-const flightFields: FieldDefinition[] = [
-  { name: 'destinationId', label: 'Destination ID', type: 'text', required: true },
-  { name: 'airline', label: 'Airline', type: 'text', required: true },
-  { name: 'flightNumber', label: 'Flight Number', type: 'text', required: true },
-  { name: 'departureCity', label: 'Departure City', type: 'text', required: true },
-  { name: 'departureTime', label: 'Departure Time', type: 'date', required: true },
-  { name: 'arrivalCity', label: 'Arrival City', type: 'text', required: true },
-  { name: 'arrivalTime', label: 'Arrival Time', type: 'date', required: true },
-  { name: 'durationMin', label: 'Duration (minutes)', type: 'number', required: true },
-  { name: 'seatClass', label: 'Seat Class', type: 'select', options: [
-    { value: 'economy', label: 'Economy' },
-    { value: 'business', label: 'Business' },
-    { value: 'first', label: 'First' },
-  ], required: true },
-  { name: 'basePrice', label: 'Base Price', type: 'number', required: true },
-  { name: 'availableSeats', label: 'Available Seats', type: 'number', required: true },
-];
+import type { Destination } from '@/types';
+
+function buildFlightFields(destinations: Destination[]): FieldDefinition[] {
+  const destOptions = destinations.map((d) => ({ value: d.id, label: `${d.name}, ${d.country}` }));
+  return [
+    { name: 'destinationId', label: 'Destination', type: 'select', required: true, options: destOptions },
+    { name: 'airline', label: 'Airline', type: 'text', required: true },
+    { name: 'flightNumber', label: 'Flight Number', type: 'text', required: true },
+    { name: 'departureCity', label: 'Departure City', type: 'text', required: true },
+    { name: 'departureTime', label: 'Departure Time', type: 'date', required: true },
+    { name: 'arrivalCity', label: 'Arrival City', type: 'text', required: true },
+    { name: 'arrivalTime', label: 'Arrival Time', type: 'date', required: true },
+    { name: 'durationMin', label: 'Duration (minutes)', type: 'number', required: true },
+  ];
+}
 
 export default function AdminFlightsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [flights, setFlights] = useState<PaginatedApiResponse<Flight> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -39,11 +42,19 @@ export default function AdminFlightsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Flight | null>(null);
+  const [seats, setSeats] = useState<SeatEntry[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<Flight | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'deactivate'>('approve');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const flightFields = useMemo(() => buildFlightFields(destinations), [destinations]);
 
   const fetchFlights = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedApiResponse<Flight>>('/admin/flights', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Flight>>('/flights/all', { page, limit: 10 });
       setFlights(data);
     } catch {
       toast.error('Failed to load flights');
@@ -54,24 +65,28 @@ export default function AdminFlightsPage() {
 
   useEffect(() => { fetchFlights(); }, [fetchFlights]);
 
+  useEffect(() => {
+    get<PaginatedApiResponse<Destination>>('/destinations', { limit: 50 }).then((d) => setDestinations(d.data)).catch(() => {});
+  }, []);
+
   const handleSubmit = async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
       const payload = {
         ...data,
         durationMin: Number(data.durationMin),
-        basePrice: Number(data.basePrice),
-        availableSeats: Number(data.availableSeats),
+        seats: seats.length > 0 ? seats : undefined,
       };
       if (editFlight) {
-        await patch(`/admin/flights/${editFlight.id}`, payload);
+        await put(`/flights/${editFlight.id}`, payload);
         toast.success('Flight updated');
       } else {
-        await post('/admin/flights', payload);
+        await post('/flights', payload);
         toast.success('Flight created');
       }
       setModalOpen(false);
       setEditFlight(null);
+      setSeats([]);
       fetchFlights();
     } catch (err) {
       toast.error(getApiError(err));
@@ -83,7 +98,7 @@ export default function AdminFlightsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await del(`/admin/flights/${deleteTarget.id}`);
+      await del(`/flights/${deleteTarget.id}`);
       toast.success('Flight deleted');
       setDeleteModalOpen(false);
       setDeleteTarget(null);
@@ -93,18 +108,74 @@ export default function AdminFlightsPage() {
     }
   };
 
+  const handleStatusChange = (flight: Flight, newStatus: string) => {
+    if (newStatus === 'active' && !flight.isActive) {
+      setConfirmTarget(flight);
+      setConfirmAction('approve');
+      setConfirmOpen(true);
+    } else if (newStatus === 'pending' && flight.isActive) {
+      setConfirmTarget(flight);
+      setConfirmAction('deactivate');
+      setConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmStatus = async () => {
+    if (!confirmTarget) return;
+    setConfirmLoading(true);
+    try {
+      if (confirmAction === 'approve') {
+        await patch(`/flights/${confirmTarget.id}/approve`);
+        toast.success('Flight approved');
+      } else {
+        await patch(`/flights/${confirmTarget.id}/deactivate`);
+        toast.success('Flight deactivated');
+      }
+      setConfirmOpen(false);
+      setConfirmTarget(null);
+      fetchFlights();
+    } catch (err) {
+      toast.error(getApiError(err));
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const minPrice = (f: Flight) => {
+    if (!f.seats || f.seats.length === 0) return 0;
+    return Math.min(...f.seats.map((s) => Number(s.price)));
+  };
+
   const columns: Column<Flight>[] = [
     { key: 'airline', header: 'Airline', sortable: true },
     { key: 'flightNumber', header: 'Flight' },
     { key: 'departureCity', header: 'From', render: (f) => f.departureCity },
     { key: 'arrivalCity', header: 'To', render: (f) => f.arrivalCity },
     { key: 'departureTime', header: 'Departure', render: (f) => formatDateTime(f.departureTime) },
-    { key: 'basePrice', header: 'Price', render: (f) => formatCurrency(f.basePrice) },
+    { key: 'price', header: 'From', render: (f) => formatCurrency(minPrice(f)) },
     { key: 'isActive', header: 'Status', render: (f) => (
-      <Badge variant={f.isActive ? 'success' : 'danger'} size="sm">
-        {f.isActive ? 'Active' : 'Inactive'}
+      <Badge variant={f.isActive ? 'success' : 'warning'} size="sm">
+        {f.isActive ? 'Active' : 'Pending'}
       </Badge>
     )},
+    {
+      key: 'actions' as const,
+      header: 'Status' as const,
+      render: (f: Flight) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <select
+            value={f.isActive ? 'active' : 'pending'}
+            onChange={(e) => handleStatusChange(f, e.target.value)}
+            className="block w-full rounded-lg border border-gray-300 px-2 py-1 text-xs shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            {isAdmin && <option value="active">Active</option>}
+            {isAdmin && <option value="pending">Pending</option>}
+            {!isAdmin && f.isActive && <option value="active">Active</option>}
+            {!isAdmin && f.isActive && <option value="pending">Deactivate</option>}
+          </select>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -116,7 +187,7 @@ export default function AdminFlightsPage() {
         </div>
         <Button
           variant="primary"
-          onClick={() => { setEditFlight(null); setModalOpen(true); }}
+          onClick={() => { setEditFlight(null); setSeats([]); setModalOpen(true); }}
         >
           <Plus className="w-4 h-4 mr-2" /> Add Flight
         </Button>
@@ -127,7 +198,7 @@ export default function AdminFlightsPage() {
         data={flights?.data || []}
         loading={loading}
         emptyMessage="No flights found"
-        onRowClick={(f) => { setEditFlight(f); setModalOpen(true); }}
+        onRowClick={(f) => { setEditFlight(f); setSeats((f.seats || []).map(s => ({ seatClass: s.seatClass, price: Number(s.price), availableSeats: s.availableSeats, totalSeats: s.totalSeats }))); setModalOpen(true); }}
         rowKey={(f) => f.id}
       />
 
@@ -139,15 +210,18 @@ export default function AdminFlightsPage() {
         </div>
       )}
 
-      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditFlight(null); }} title={editFlight ? 'Edit Flight' : 'Add Flight'} size="xl">
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditFlight(null); setSeats([]); }} title={editFlight ? 'Edit Flight' : 'Add Flight'} size="xl">
         <ManageForm
           fields={flightFields}
           initialData={editFlight || undefined}
           onSubmit={handleSubmit}
           loading={saving}
           isEdit={!!editFlight}
-          onCancel={() => setModalOpen(false)}
+          onCancel={() => { setModalOpen(false); setEditFlight(null); setSeats([]); }}
         />
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <SeatEditor seats={seats} onChange={setSeats} />
+        </div>
         {editFlight && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <Button
@@ -168,6 +242,17 @@ export default function AdminFlightsPage() {
           <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setConfirmTarget(null); }}
+        onConfirm={handleConfirmStatus}
+        title={confirmAction === 'approve' ? 'Approve Flight' : 'Deactivate Flight'}
+        message={`Are you sure you want to ${confirmAction === 'approve' ? 'approve' : 'deactivate'} flight ${confirmTarget?.flightNumber}?`}
+        confirmLabel={confirmAction === 'approve' ? 'Approve' : 'Deactivate'}
+        variant={confirmAction === 'approve' ? 'primary' : 'danger'}
+        loading={confirmLoading}
+      />
     </div>
   );
 }

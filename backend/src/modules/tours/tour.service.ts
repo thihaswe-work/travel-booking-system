@@ -58,6 +58,74 @@ export async function list(filters: ListFilters, query: { page?: string; limit?:
   return { data, pagination: getPaginationMeta(total, page, limit) };
 }
 
+export async function adminList(
+  filters: { destinationId?: string; search?: string; sort?: string },
+  query: { page?: string; limit?: string },
+  user: { id: string; role: string },
+) {
+  const { skip, take, page, limit } = getPagination(query);
+
+  const where: Prisma.TourWhereInput = {};
+
+  if (user.role !== 'admin') {
+    where.createdById = user.id;
+  }
+
+  if (filters.destinationId) {
+    where.destinationId = filters.destinationId;
+  }
+
+  if (filters.search) {
+    where.name = { contains: filters.search, mode: 'insensitive' };
+  }
+
+  const sortField = filters.sort || 'name';
+  const orderBy: Prisma.TourOrderByWithRelationInput =
+    sortField === 'price' ? { pricePerPerson: 'asc' } :
+    sortField === 'duration' ? { durationDays: 'asc' } :
+    { name: 'asc' };
+
+  const [data, total] = await Promise.all([
+    prisma.tour.findMany({
+      where,
+      include: { destination: true },
+      orderBy,
+      skip,
+      take,
+    }),
+    prisma.tour.count({ where }),
+  ]);
+
+  return { data, pagination: getPaginationMeta(total, page, limit) };
+}
+
+export async function approve(id: string) {
+  const existing = await prisma.tour.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Tour not found', 404, 'NOT_FOUND');
+  }
+  return prisma.tour.update({
+    where: { id },
+    data: { isActive: true },
+    include: { destination: true },
+  });
+}
+
+export async function deactivate(id: string, userId: string, userRole: string) {
+  const existing = await prisma.tour.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError('Tour not found', 404, 'NOT_FOUND');
+  }
+  if (userRole !== 'admin' && existing.createdById !== userId) {
+    throw new AppError('Not authorized to deactivate this tour', 403, 'FORBIDDEN');
+  }
+  return prisma.tour.update({
+    where: { id },
+    data: { isActive: false },
+    include: { destination: true },
+  });
+}
+
 export async function getById(id: string) {
   const tour = await prisma.tour.findUnique({
     where: { id },
@@ -71,7 +139,19 @@ export async function getById(id: string) {
   return tour;
 }
 
-export async function create(data: Record<string, unknown>) {
+export async function create(data: {
+  destinationId: string;
+  name: string;
+  description?: string;
+  durationDays: number;
+  pricePerPerson: number;
+  maxCapacity: number;
+  availableSlots: number;
+  includes?: unknown;
+  itinerary?: unknown;
+  imageUrl?: string;
+  createdById?: string;
+}) {
   return prisma.tour.create({
     data: data as any,
     include: { destination: true },

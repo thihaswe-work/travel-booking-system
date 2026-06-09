@@ -82,13 +82,17 @@
 ```
 users ──< bookings ──< booking_details ──< booking_passengers
   │                    │
-  │                    ├── flights
+  │                    ├── flights ──< flight_seats
   │                    ├── hotels ──< hotel_rooms
   │                    └── tours
   │
-  └──< notifications
+  ├──< notifications
   │
-  └──< payments
+  ├──< payments
+  │
+  └──< flights (created_by)
+  └──< hotels (created_by)
+  └──< tours (created_by)
 
 destinations ──< flights
              ──< hotels
@@ -144,26 +148,38 @@ analytics_daily (denormalized aggregation table)
 | departure_time | TIMESTAMPTZ  | NOT NULL                       |
 | arrival_time   | TIMESTAMPTZ  | NOT NULL                       |
 | duration_min   | INTEGER      |                                |
-| seat_class     | ENUM         | economy, business, first       |
-| base_price     | DECIMAL(10,2)| NOT NULL                       |
-| available_seats| INTEGER      | NOT NULL                       |
+| created_by_id  | UUID         | FK → users.id (creator)        |
 | is_active      | BOOLEAN      | DEFAULT true                   |
 | created_at     | TIMESTAMPTZ  | DEFAULT NOW()                  |
 
 **Indexes:** `destination_id`, `(departure_city, arrival_city)`
 
+#### `flight_seats` ✅
+| Column         | Type          | Constraints                    |
+|----------------|---------------|--------------------------------|
+| id             | UUID          | PK                             |
+| flight_id      | UUID          | FK → flights.id                |
+| seat_class     | ENUM          | economy, business, first       |
+| price          | DECIMAL(10,2) | NOT NULL                       |
+| total_seats    | INTEGER       | NOT NULL                       |
+| available_seats| INTEGER       | NOT NULL                       |
+
+**Unique:** `(flight_id, seat_class)`
+
 #### `hotels` ✅
-| Column         | Type         | Constraints              |
-|----------------|--------------|--------------------------|
-| id             | UUID         | PK                       |
-| destination_id | UUID         | FK → destinations.id     |
-| name           | VARCHAR(200) | NOT NULL                 |
-| address        | TEXT         |                          |
-| star_rating    | SMALLINT     | 1–5                      |
-| description    | TEXT         |                          |
-| image_url      | VARCHAR(500) |                          |
-| is_active      | BOOLEAN      | DEFAULT true             |
-| created_at     | TIMESTAMPTZ  | DEFAULT NOW()            |
+| Column         | Type          | Constraints              |
+|----------------|---------------|--------------------------|
+| id             | UUID          | PK                       |
+| destination_id | UUID          | FK → destinations.id     |
+| name           | VARCHAR(200)  | NOT NULL                 |
+| address        | TEXT          |                          |
+| star_rating    | SMALLINT      | 1–5                      |
+| description    | TEXT          |                          |
+| image_url      | VARCHAR(500)  |                          |
+| price_per_night| DECIMAL(10,2) | NOT NULL                 |
+| created_by_id  | UUID          | FK → users.id (creator)  |
+| is_active      | BOOLEAN       | DEFAULT true             |
+| created_at     | TIMESTAMPTZ   | DEFAULT NOW()            |
 
 **Index:** `destination_id`
 
@@ -196,6 +212,7 @@ analytics_daily (denormalized aggregation table)
 | available_slots  | INTEGER       | NOT NULL                 |
 | includes         | JSONB         |                          |
 | itinerary        | JSONB         |                          |
+| created_by_id    | UUID          | FK → users.id (creator)  |
 | is_active        | BOOLEAN       | DEFAULT true             |
 | created_at       | TIMESTAMPTZ   | DEFAULT NOW()            |
 
@@ -301,9 +318,13 @@ analytics_daily (denormalized aggregation table)
 
 ```
 users 1────N bookings
+users 1────N flights (created_by)
+users 1────N hotels (created_by)
+users 1────N tours (created_by)
 bookings 1────N booking_details
 booking_details 1────N booking_passengers
 
+flights 1────N flight_seats
 flights 1────N booking_details (item_type='flight')
 hotels 1────N hotel_rooms
 hotel_rooms 1────N booking_details (item_type='hotel')
@@ -393,7 +414,11 @@ Base URL: `/api/v1`
 | GET    | /users/me/bookings| List user's bookings      | Yes        |
 | GET    | /users            | List all users (admin)    | Admin      |
 | GET    | /users/:id        | Get user by ID (admin)    | Admin      |
+| POST   | /users            | Create user (admin)       | Admin      |
 | PATCH  | /users/:id        | Update user (admin)       | Admin      |
+
+**POST /users** — creates user with any role, `isActive` defaults to `false`.  
+**PATCH /users/:id** — can update `role`, `isActive`, and profile fields.
 
 **PATCH /users/me**
 ```json
@@ -426,10 +451,11 @@ Base URL: `/api/v1`
 |--------|-----------------------|--------------------------|------------|
 | GET    | /flights              | Search flights           | No         |
 | GET    | /flights/:id          | Get flight details       | No         |
-| POST   | /flights              | Create flight            | Admin      |
-| PUT    | /flights/:id          | Update flight            | Admin      |
-| DELETE | /flights/:id          | Soft-delete flight       | Admin      |
-| PATCH  | /flights/:id/seats    | Update seat availability | Admin      |
+| POST   | /flights              | Create flight            | Admin/Agent|
+| PUT    | /flights/:id          | Update flight            | Admin/Agent|
+| DELETE | /flights/:id          | Soft-delete flight       | Admin/Agent|
+| PATCH  | /flights/:id/approve  | Activate flight          | Admin      |
+| PATCH  | /flights/:id/deactivate| Deactivate flight       | Admin/Agent|
 
 **GET /flights?departure_city=NYC&arrival_city=Tokyo&date=2026-07-15&seat_class=economy**
 ```json
@@ -446,9 +472,10 @@ Base URL: `/api/v1`
       "departureTime": "2026-07-15T23:30:00Z",
       "arrivalTime": "2026-07-16T18:45:00Z",
       "durationMin": 735,
-      "seatClass": "economy",
-      "basePrice": 850.00,
-      "availableSeats": 42,
+      "seats": [
+        { "seatClass": "economy", "price": 850.00, "totalSeats": 150, "availableSeats": 42 },
+        { "seatClass": "business", "price": 3200.00, "totalSeats": 48, "availableSeats": 10 }
+      ],
       "destination": { "id": "uuid", "name": "Tokyo" }
     }
   ],
@@ -462,9 +489,11 @@ Base URL: `/api/v1`
 |--------|-------------------------|---------------------------|------------|
 | GET    | /hotels                 | Search hotels             | No         |
 | GET    | /hotels/:id             | Get hotel details+rooms   | No         |
-| POST   | /hotels                 | Create hotel              | Admin      |
-| PUT    | /hotels/:id             | Update hotel              | Admin      |
-| DELETE | /hotels/:id             | Soft-delete hotel         | Admin      |
+| POST   | /hotels                 | Create hotel              | Admin/Agent|
+| PUT    | /hotels/:id             | Update hotel              | Admin/Agent|
+| DELETE | /hotels/:id             | Soft-delete hotel         | Admin/Agent|
+| PATCH  | /hotels/:id/approve     | Activate hotel            | Admin      |
+| PATCH  | /hotels/:id/deactivate  | Deactivate hotel          | Admin/Agent|
 
 ### Tours ✅ (all implemented)
 
@@ -472,9 +501,11 @@ Base URL: `/api/v1`
 |--------|-----------------------|--------------------------|------------|
 | GET    | /tours                | Search tours             | No         |
 | GET    | /tours/:id            | Get tour details         | No         |
-| POST   | /tours                | Create tour              | Admin      |
-| PUT    | /tours/:id            | Update tour              | Admin      |
-| DELETE | /tours/:id            | Soft-delete tour         | Admin      |
+| POST   | /tours                | Create tour              | Admin/Agent|
+| PUT    | /tours/:id            | Update tour              | Admin/Agent|
+| DELETE | /tours/:id            | Soft-delete tour         | Admin/Agent|
+| PATCH  | /tours/:id/approve    | Activate tour            | Admin      |
+| PATCH  | /tours/:id/deactivate | Deactivate tour          | Admin/Agent|
 
 ### Bookings ✅ (all implemented)
 
@@ -502,6 +533,14 @@ Base URL: `/api/v1`
 | GET    | /admin/analytics/bookings      | Bookings over time           | Admin |
 | GET    | /admin/analytics/revenue       | Revenue over time            | Admin |
 | GET    | /admin/analytics/popular       | Popular destinations         | Admin |
+
+### File Upload ✅
+
+| Method | Endpoint          | Description              | Auth       |
+|--------|-------------------|--------------------------|------------|
+| POST   | /upload           | Upload image             | Admin/Agent|
+
+Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`.
 
 ### Notifications ✅ (all implemented)
 
@@ -634,7 +673,8 @@ backend/
 │   │   ├── payments/    (controller, service, routes, validation)
 │   │   ├── notifications/ (controller, service, routes, validation)
 │   │   ├── destinations/  (controller, service, routes, validation)
-│   │   └── admin/       (controller, service, routes, validation)
+│   │   ├── admin/       (controller, service, routes, validation)
+│   │   └── upload/      (routes)
 │   ├── utils/
 │   │   ├── AppError.ts
 │   │   ├── jwt.ts

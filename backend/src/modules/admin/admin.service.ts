@@ -15,7 +15,8 @@ export const adminService = {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const [totalBookings, paidAgg, totalUsers, todayBookings, todayPaidAgg, bookingsByType] =
+    const [totalBookings, paidAgg, totalUsers, todayBookings, todayPaidAgg, bookingsByType,
+           pendingFlights, pendingHotels, pendingTours] =
       await Promise.all([
         prisma.booking.count({ where: dateFilter }),
         prisma.payment.aggregate({
@@ -35,6 +36,9 @@ export const adminService = {
           where: dateFilter,
           _count: true,
         }),
+        prisma.flight.count({ where: { isActive: false } }),
+        prisma.hotel.count({ where: { isActive: false } }),
+        prisma.tour.count({ where: { isActive: false } }),
       ]);
 
     const revenueByType = await Promise.all(
@@ -64,11 +68,16 @@ export const adminService = {
       })),
       revenueByType,
       popularDestinations,
+      pendingFlights,
+      pendingHotels,
+      pendingTours,
     };
   },
 
-  async getBookingsAnalytics(from: string, to: string, groupBy: string) {
+  async getBookingsAnalytics(from?: string, to?: string, groupBy: string = 'day') {
     const trunc = groupBy === 'week' ? 'week' : groupBy === 'month' ? 'month' : 'day';
+    const fromDate = from ? new Date(from) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+    const toDate = to ? new Date(to) : new Date();
     const results: Array<{ date: Date; count: bigint; revenue: string }> = await prisma.$queryRawUnsafe(
       `SELECT DATE_TRUNC($1, created_at) as date,
               COUNT(*)::int as count,
@@ -78,8 +87,8 @@ export const adminService = {
        GROUP BY DATE_TRUNC($1, created_at)
        ORDER BY date ASC`,
       trunc,
-      new Date(from),
-      new Date(to),
+      fromDate,
+      toDate,
     );
 
     return results.map((r) => ({
@@ -89,8 +98,10 @@ export const adminService = {
     }));
   },
 
-  async getRevenueAnalytics(from: string, to: string, groupBy: string) {
+  async getRevenueAnalytics(from?: string, to?: string, groupBy: string = 'day') {
     const trunc = groupBy === 'week' ? 'week' : groupBy === 'month' ? 'month' : 'day';
+    const fromDate = from ? new Date(from) : new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+    const toDate = to ? new Date(to) : new Date();
     const results: Array<{ date: Date; amount: string }> = await prisma.$queryRawUnsafe(
       `SELECT DATE_TRUNC($1, paid_at) as date,
               COALESCE(SUM(amount)::float, 0) as amount
@@ -98,9 +109,9 @@ export const adminService = {
        WHERE payment_status = 'paid' AND paid_at >= $2 AND paid_at <= $3
        GROUP BY DATE_TRUNC($1, paid_at)
        ORDER BY date ASC`,
-      trunc,
-      new Date(from),
-      new Date(to),
+       trunc,
+      fromDate,
+      toDate,
     );
 
     return results.map((r) => ({

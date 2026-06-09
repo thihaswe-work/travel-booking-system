@@ -4,7 +4,7 @@ import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { asyncHandler } from '../../middleware/asyncHandler';
 import * as userController from './user.controller';
-import { updateProfileSchema } from './user.validation';
+import { updateProfileSchema, updateUserSchema, registerSchema } from './user.validation';
 
 const router = Router();
 
@@ -13,7 +13,8 @@ router.patch('/me', authenticate, validate({ body: updateProfileSchema }), async
 router.get('/me/bookings', authenticate, asyncHandler(userController.getMyBookings));
 
 router.get('/', authenticate, authorize('admin'), asyncHandler(userController.listAllUsers));
+router.post('/', authenticate, authorize('admin'), validate({ body: registerSchema }), asyncHandler(userController.createUser));
 router.get('/:id', authenticate, authorize('admin'), asyncHandler(userController.getUserById));
-router.patch('/:id', authenticate, authorize('admin'), validate({ body: updateProfileSchema }), asyncHandler(userController.updateUserById));
+router.patch('/:id', authenticate, authorize('admin'), validate({ body: updateUserSchema }), asyncHandler(userController.updateUserById));
 
 export default router;

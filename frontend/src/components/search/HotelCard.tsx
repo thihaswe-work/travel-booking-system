@@ -12,9 +12,9 @@ interface HotelCardProps {
 }
 
 export default function HotelCard({ hotel }: HotelCardProps) {
-  const lowestPrice = hotel.rooms && hotel.rooms.length > 0
+  const displayPrice = hotel.pricePerNight || (hotel.rooms && hotel.rooms.length > 0
     ? Math.min(...hotel.rooms.map((r) => r.pricePerNight))
-    : null;
+    : null);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden card-hover flex flex-col md:flex-row">
@@ -47,10 +47,10 @@ export default function HotelCard({ hotel }: HotelCardProps) {
         </div>
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
           <div>
-            {lowestPrice !== null ? (
+            {displayPrice !== null ? (
               <>
                 <p className="text-2xl font-bold text-primary-600">
-                  {formatCurrency(lowestPrice)}
+                  {formatCurrency(displayPrice)}
                 </p>
                 <p className="text-xs text-gray-500">per night</p>
               </>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { get, patch, getApiError } from '@/lib/api';
+import { get, post, getApiError } from '@/lib/api';
 import BookingSummary from '@/components/booking/BookingSummary';
 import PaymentForm from '@/components/booking/PaymentForm';
 import Spinner from '@/components/ui/Spinner';
@@ -23,6 +23,9 @@ export default function CheckoutPage() {
       try {
         const data = await get<Booking>(`/bookings/${params.bookingId}`);
         setBooking(data);
+        if (data.status === 'confirmed') {
+          router.push(`/booking/${params.bookingId}`);
+        }
       } catch {
         toast.error('Failed to load booking');
         router.push('/');
@@ -34,15 +37,14 @@ export default function CheckoutPage() {
   }, [params.bookingId, router]);
 
   const handlePayment = async (method: string, cardLastFour?: string) => {
+    if (!booking || !booking.payments?.length) return;
     setPaymentProcessing(true);
     try {
-      await patch<Booking>(`/bookings/${params.bookingId}/payment`, {
-        method,
+      const paymentId = booking.payments[0].id;
+      await post(`/payments/${paymentId}/process`, {
+        paymentMethod: method,
         cardLastFour,
-        status: method === 'cash_on_arrival' ? 'pending' : 'completed',
-      });
-      await patch<Booking>(`/bookings/${params.bookingId}/status`, {
-        status: 'confirmed',
+        mockSuccess: true,
       });
       toast.success('Booking confirmed!');
       router.push(`/booking/${params.bookingId}`);
@@ -66,7 +68,7 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Link
-        href={`/bookings/${params.bookingId}`}
+        href={`/booking/${params.bookingId}`}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
       >
         <ArrowLeft className="w-4 h-4" /> Back

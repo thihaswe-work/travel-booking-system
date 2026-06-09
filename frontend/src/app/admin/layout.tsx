@@ -12,15 +12,16 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isAdmin, loading, user } = useAuth();
+  const { isAuthenticated, isAdmin, isAgent, loading, user } = useAuth();
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const isAgentOrAdmin = isAdmin || isAgent;
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || !isAdmin)) {
+    if (!loading && (!isAuthenticated || !isAgentOrAdmin)) {
       router.push('/login');
     }
-  }, [loading, isAuthenticated, isAdmin, router]);
+  }, [loading, isAuthenticated, isAgentOrAdmin, router]);
 
   if (loading) {
     return (
@@ -30,11 +31,12 @@ export default function AdminLayout({
     );
   }
 
-  if (!isAdmin) return null;
+  if (!isAgentOrAdmin) return null;
 
   return (
     <div className="flex">
       <Sidebar
+        role={user?.role || 'customer'}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
@@ -43,7 +45,7 @@ export default function AdminLayout({
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary-600" />
             <span className="text-sm font-medium text-gray-700">
-              Admin Panel
+              {user?.role === 'admin' ? 'Admin Panel' : 'Agent Panel'}
             </span>
             {user && (
               <span className="text-sm text-gray-400 ml-2">

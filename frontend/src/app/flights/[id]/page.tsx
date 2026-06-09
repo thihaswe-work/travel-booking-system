@@ -39,10 +39,19 @@ export default function FlightDetailPage() {
     try {
       const bookingData = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'flight',
-        flightId: flight?.id,
-        seatClass,
-        passengers,
-        totalAmount: (flight?.basePrice || 0) * passengers.length,
+        items: [{
+          itemType: 'flight',
+          itemId: flight!.id,
+          quantity: passengers.length,
+          passengers: passengers.map((p) => ({
+            firstName: p.firstName,
+            lastName: p.lastName,
+            documentType: p.documentType,
+            documentNumber: p.documentNumber,
+            seatClass,
+          })),
+        }],
+        paymentMethod: 'cash_on_arrival',
       });
       const booking = bookingData.data;
       toast.success('Booking created!');
@@ -75,6 +84,7 @@ export default function FlightDetailPage() {
 
   const hours = Math.floor(flight.durationMin / 60);
   const mins = flight.durationMin % 60;
+  const seats = flight.seats || [];
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -127,11 +137,15 @@ export default function FlightDetailPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="p-4 bg-gray-50 rounded-lg text-center">
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(flight.basePrice)}</p>
-                <p className="text-xs text-gray-500">{flight.seatClass === 'economy' ? 'Economy' : flight.seatClass === 'business' ? 'Business' : 'First Class'}</p>
-                <p className="text-xs text-gray-400">{flight.availableSeats} seats</p>
-              </div>
+              {seats.map((seat) => (
+                <div key={seat.id} className="p-4 bg-gray-50 rounded-lg text-center">
+                  <p className="text-lg font-bold text-gray-900">{formatCurrency(Number(seat.price))}</p>
+                  <p className="text-xs text-gray-500">
+                    {seat.seatClass === 'economy' ? 'Economy' : seat.seatClass === 'business' ? 'Business' : 'First Class'}
+                  </p>
+                  <p className="text-xs text-gray-400">{seat.availableSeats} seats</p>
+                </div>
+              ))}
             </div>
           </div>
 

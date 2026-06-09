@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { get, post, patch, del, getApiError } from '@/lib/api';
+import { get, post, put, del, getApiError } from '@/lib/api';
 import Table, { Column } from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
@@ -32,7 +32,7 @@ export default function AdminDestinationsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedApiResponse<Destination>>('/admin/destinations', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Destination>>('/destinations', { page, limit: 10 });
       setDestinations(data);
     } catch {
       toast.error('Failed to load destinations');
@@ -48,10 +48,10 @@ export default function AdminDestinationsPage() {
     try {
       const payload = { ...data };
       if (editDest) {
-        await patch(`/admin/destinations/${editDest.id}`, payload);
+        await put(`/destinations/${editDest.id}`, payload);
         toast.success('Destination updated');
       } else {
-        await post('/admin/destinations', payload);
+        await post('/destinations', payload);
         toast.success('Destination created');
       }
       setModalOpen(false);
@@ -66,7 +66,7 @@ export default function AdminDestinationsPage() {
 
   const handleToggleActive = async (dest: Destination) => {
     try {
-      await patch(`/admin/destinations/${dest.id}`, { isActive: !dest.isActive });
+      await put(`/destinations/${dest.id}`, { isActive: !dest.isActive });
       toast.success(`Destination ${dest.isActive ? 'deactivated' : 'activated'}`);
       fetchData();
     } catch (err) {
@@ -77,7 +77,7 @@ export default function AdminDestinationsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await del(`/admin/destinations/${deleteTarget.id}`);
+      await del(`/destinations/${deleteTarget.id}`);
       toast.success('Destination deleted');
       setDeleteModalOpen(false);
       setDeleteTarget(null);

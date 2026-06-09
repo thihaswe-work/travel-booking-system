@@ -37,19 +37,16 @@ export default function HotelDetailPage() {
     if (!hotel) return;
     setBooking(true);
     try {
-      const room = hotel.rooms?.find((r) => r.id === roomId);
-      const nights = Math.floor(
-        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000
-      );
-      const totalAmount = (room?.pricePerNight || 0) * nights * quantity;
       const res = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'hotel',
-        hotelId: hotel.id,
-        roomId,
-        checkIn,
-        checkOut,
-        roomQuantity: quantity,
-        totalAmount,
+        items: [{
+          itemType: 'hotel',
+          itemId: roomId,
+          quantity,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+        }],
+        paymentMethod: 'cash_on_arrival',
       });
       toast.success('Booking created!');
       router.push(`/booking/checkout/${res.data.id}`);
@@ -142,15 +139,13 @@ export default function HotelDetailPage() {
                 <span className="text-gray-500">Location</span>
                 <span className="font-medium text-gray-900">{hotel.address}</span>
               </div>
-              {hotel.rooms && hotel.rooms.length > 0 && (
-                <div className="pt-3 border-t border-gray-100">
-                  <p className="text-gray-500 text-xs mb-1">Starting from</p>
-                  <p className="text-xl font-bold text-primary-600">
-                    {formatCurrency(Math.min(...(hotel.rooms || []).map((r) => r.pricePerNight)))}
-                  </p>
-                  <p className="text-xs text-gray-400">per night</p>
-                </div>
-              )}
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-gray-500 text-xs mb-1">Price per night</p>
+                <p className="text-xl font-bold text-primary-600">
+                  {formatCurrency(hotel.pricePerNight || (hotel.rooms && hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.pricePerNight)) : 0))}
+                </p>
+                <p className="text-xs text-gray-400">per night</p>
+              </div>
             </div>
           </div>
         </div>

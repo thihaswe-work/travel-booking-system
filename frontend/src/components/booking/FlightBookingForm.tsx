@@ -25,21 +25,22 @@ const docTypeOptions = [
   { value: 'id', label: 'ID Card' },
 ];
 
-const seatClassOptions = [
-  { value: 'economy', label: 'Economy' },
-  { value: 'business', label: 'Business' },
-  { value: 'first', label: 'First Class' },
-];
-
 export default function FlightBookingForm({ flight, onComplete }: FlightBookingFormProps) {
   const [passengerCount, setPassengerCount] = useState(1);
-  const [seatClass, setSeatClass] = useState('economy');
+  const seats = flight.seats || [];
+  const [seatClass, setSeatClass] = useState<string>(seats[0]?.seatClass || 'economy');
   const [passengers, setPassengers] = useState<PassengerInput[]>([
     { firstName: '', lastName: '', documentType: 'passport', documentNumber: '' },
   ]);
 
-  const getPriceForClass = (seatClass: string): number => {
-    return flight.basePrice;
+  const seatClassOptions = seats.map((s) => ({
+    value: s.seatClass,
+    label: `${s.seatClass.charAt(0).toUpperCase() + s.seatClass.slice(1)} (${formatCurrency(Number(s.price))})`,
+  }));
+
+  const getPriceForClass = (cls: string): number => {
+    const seat = seats.find((s) => s.seatClass === cls);
+    return seat ? Number(seat.price) : 0;
   };
 
   const totalPrice = useMemo(
@@ -119,17 +120,16 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
         </div>
       </div>
 
-      <div>
-        <Select
-          label="Seat Class"
-          options={seatClassOptions.map((o) => ({
-            ...o,
-            label: `${o.label} (${formatCurrency(getPriceForClass(o.value))})`,
-          }))}
-          value={seatClass}
-          onChange={(e) => setSeatClass(e.target.value)}
-        />
-      </div>
+      {seatClassOptions.length > 0 && (
+        <div>
+          <Select
+            label="Seat Class"
+            options={seatClassOptions}
+            value={seatClass}
+            onChange={(e) => setSeatClass(e.target.value)}
+          />
+        </div>
+      )}
 
       {passengers.map((passenger, index) => (
         <div

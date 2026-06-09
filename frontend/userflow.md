@@ -163,9 +163,34 @@ Clean routes `/flights`, `/hotels`, `/tours` each use the shared `SearchView` co
    │  + Add New button                │
    │  - Table with columns            │
    │  - Click row to edit             │
+   │  - Approve/Deactivate buttons    │
    │  - Delete with confirmation      │
    │  - Pagination                    │
    └──────────────────────────────────┘
+```
+
+## 4a. Agent Flow
+
+```
+   Travel Agents manage their own content:
+   ┌────────────────────────────────────────┐
+   │  Agent Panel (via sidebar/nav)         │
+   │                                        │
+   │  - Create flights/hotels/tours         │
+   │    → isActive = false (Pending)        │
+   │  - Edit own items only                 │
+   │  - Deactivate own items only           │
+   │  - View own items in admin tables      │
+   └────────────────────────────────────────┘
+
+   Admin must approve agent-created items:
+   ┌────────────────────────────────────────┐
+   │  Admin approves: PATCH /:id/approve    │
+   │  Admin deactivates any: PATCH /:id/    │
+   │    deactivate                          │
+   │  Admin bans agents: PATCH /users/:id   │
+   │    { "isActive": false }               │
+   └────────────────────────────────────────┘
 ```
 
 ---

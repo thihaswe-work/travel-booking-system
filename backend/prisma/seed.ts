@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole, SeatClass } from '@prisma/client';
+import { PrismaClient, UserRole, AgentTrustLevel, SeatClass } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,6 +16,7 @@ async function main() {
   await prisma.booking.deleteMany();
   await prisma.hotelRoom.deleteMany();
   await prisma.tour.deleteMany();
+  await prisma.flightSeat.deleteMany();
   await prisma.flight.deleteMany();
   await prisma.hotel.deleteMany();
   await prisma.destination.deleteMany();
@@ -50,6 +51,8 @@ async function main() {
       lastName: 'Agent',
       phone: '+1234567891',
       isActive: true,
+      trustLevel: AgentTrustLevel.trusted,
+      approvedItemsCount: 0,
     },
   });
 
@@ -105,20 +108,51 @@ async function main() {
 
   console.log('Destinations seeded');
 
-  const flightsData = [
-    { destId: tokyo.id, airline: 'Japan Airlines', flightNumber: 'JL001', dep: 'Los Angeles', arr: 'Tokyo', depTime: new Date('2025-06-10T10:00:00Z'), arrTime: new Date('2025-06-11T14:00:00Z'), dur: 600, cls: SeatClass.economy, price: 850.00, seats: 120 },
-    { destId: tokyo.id, airline: 'ANA', flightNumber: 'NH002', dep: 'San Francisco', arr: 'Tokyo', depTime: new Date('2025-06-10T12:00:00Z'), arrTime: new Date('2025-06-11T15:30:00Z'), dur: 570, cls: SeatClass.business, price: 3200.00, seats: 48 },
-    { destId: tokyo.id, airline: 'Delta', flightNumber: 'DL003', dep: 'New York', arr: 'Tokyo', depTime: new Date('2025-06-11T09:00:00Z'), arrTime: new Date('2025-06-12T12:00:00Z'), dur: 540, cls: SeatClass.first, price: 5800.00, seats: 24 },
-    { destId: paris.id, airline: 'Air France', flightNumber: 'AF001', dep: 'New York', arr: 'Paris', depTime: new Date('2025-06-10T18:00:00Z'), arrTime: new Date('2025-06-11T07:30:00Z'), dur: 450, cls: SeatClass.economy, price: 720.00, seats: 150 },
-    { destId: paris.id, airline: 'British Airways', flightNumber: 'BA002', dep: 'London', arr: 'Paris', depTime: new Date('2025-06-10T14:00:00Z'), arrTime: new Date('2025-06-10T16:30:00Z'), dur: 150, cls: SeatClass.business, price: 450.00, seats: 36 },
-    { destId: paris.id, airline: 'United', flightNumber: 'UA003', dep: 'Chicago', arr: 'Paris', depTime: new Date('2025-06-11T11:00:00Z'), arrTime: new Date('2025-06-12T01:00:00Z'), dur: 480, cls: SeatClass.economy, price: 680.00, seats: 140 },
-    { destId: newyork.id, airline: 'American Airlines', flightNumber: 'AA001', dep: 'Miami', arr: 'New York', depTime: new Date('2025-06-10T08:00:00Z'), arrTime: new Date('2025-06-10T11:00:00Z'), dur: 180, cls: SeatClass.economy, price: 250.00, seats: 160 },
-    { destId: newyork.id, airline: 'JetBlue', flightNumber: 'B6002', dep: 'Los Angeles', arr: 'New York', depTime: new Date('2025-06-10T22:00:00Z'), arrTime: new Date('2025-06-11T06:00:00Z'), dur: 360, cls: SeatClass.business, price: 890.00, seats: 40 },
-    { destId: newyork.id, airline: 'Southwest', flightNumber: 'WN003', dep: 'Denver', arr: 'New York', depTime: new Date('2025-06-11T07:00:00Z'), arrTime: new Date('2025-06-11T12:30:00Z'), dur: 210, cls: SeatClass.economy, price: 320.00, seats: 130 },
+  const flightSeeds = [
+    {
+      destId: tokyo.id, airline: 'Japan Airlines', flightNumber: 'JL001', dep: 'Los Angeles', arr: 'Tokyo',
+      depTime: new Date('2026-06-10T10:00:00Z'), arrTime: new Date('2026-06-11T14:00:00Z'), dur: 600, isActive: true,
+      seats: [
+        { seatClass: SeatClass.economy, price: 850.00, total: 120, avail: 120 },
+        { seatClass: SeatClass.business, price: 3200.00, total: 48, avail: 48 },
+      ],
+    },
+    {
+      destId: paris.id, airline: 'Air France', flightNumber: 'AF001', dep: 'New York', arr: 'Paris',
+      depTime: new Date('2026-06-10T18:00:00Z'), arrTime: new Date('2026-06-11T07:30:00Z'), dur: 450, isActive: true,
+      seats: [
+        { seatClass: SeatClass.economy, price: 720.00, total: 150, avail: 150 },
+        { seatClass: SeatClass.business, price: 1800.00, total: 36, avail: 36 },
+      ],
+    },
+    {
+      destId: paris.id, airline: 'British Airways', flightNumber: 'BA002', dep: 'London', arr: 'Paris',
+      depTime: new Date('2026-06-10T14:00:00Z'), arrTime: new Date('2026-06-10T16:30:00Z'), dur: 150, isActive: true,
+      seats: [
+        { seatClass: SeatClass.economy, price: 250.00, total: 80, avail: 80 },
+        { seatClass: SeatClass.business, price: 450.00, total: 36, avail: 36 },
+      ],
+    },
+    {
+      destId: newyork.id, airline: 'American Airlines', flightNumber: 'AA001', dep: 'Miami', arr: 'New York',
+      depTime: new Date('2026-06-10T08:00:00Z'), arrTime: new Date('2026-06-10T11:00:00Z'), dur: 180, isActive: true,
+      seats: [
+        { seatClass: SeatClass.economy, price: 250.00, total: 160, avail: 160 },
+        { seatClass: SeatClass.business, price: 890.00, total: 40, avail: 40 },
+      ],
+    },
+    {
+      destId: newyork.id, airline: 'JetBlue', flightNumber: 'B6002', dep: 'Los Angeles', arr: 'New York',
+      depTime: new Date('2026-06-10T22:00:00Z'), arrTime: new Date('2026-06-11T06:00:00Z'), dur: 360, isActive: true,
+      seats: [
+        { seatClass: SeatClass.economy, price: 320.00, total: 130, avail: 130 },
+        { seatClass: SeatClass.first, price: 1200.00, total: 24, avail: 24 },
+      ],
+    },
   ];
 
-  for (const f of flightsData) {
-    await prisma.flight.create({
+  for (const f of flightSeeds) {
+    const flight = await prisma.flight.create({
       data: {
         id: uuidv4(),
         destinationId: f.destId,
@@ -129,12 +163,23 @@ async function main() {
         departureTime: f.depTime,
         arrivalTime: f.arrTime,
         durationMin: f.dur,
-        seatClass: f.cls,
-        basePrice: f.price,
-        availableSeats: f.seats,
-        isActive: true,
+        isActive: f.isActive,
+        createdById: admin.id,
       },
     });
+
+    for (const s of f.seats) {
+      await prisma.flightSeat.create({
+        data: {
+          id: uuidv4(),
+          flightId: flight.id,
+          seatClass: s.seatClass,
+          price: s.price,
+          totalSeats: s.total,
+          availableSeats: s.avail,
+        },
+      });
+    }
   }
 
   console.log('Flights seeded');
@@ -191,8 +236,12 @@ async function main() {
         destinationId: h.destId,
         name: h.name,
         address: h.address,
+        description: `Experience luxury and comfort at ${h.name}.`,
+        imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
         starRating: h.stars,
+        pricePerNight: Math.min(...h.rooms.map((r) => r.price)),
         isActive: true,
+        createdById: admin.id,
       },
     });
 
@@ -284,6 +333,7 @@ async function main() {
         includes: t.includes,
         itinerary: t.itinerary,
         isActive: true,
+        createdById: admin.id,
       },
     });
   }

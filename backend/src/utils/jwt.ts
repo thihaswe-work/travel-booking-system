@@ -1,22 +1,30 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 
-export function generateAccessToken(payload: { id: string; email: string; role: string }): string {
+export interface TokenPayload {
+  id: string;
+  email: string;
+  role: string;
+  trustLevel?: string;
+  approvedItemsCount?: number;
+}
+
+export function generateAccessToken(payload: TokenPayload): string {
   return jwt.sign(payload, config.jwt.secret, {
     expiresIn: config.jwt.expiresIn,
   });
 }
 
-export function generateRefreshToken(payload: { id: string; email: string; role: string }): string {
+export function generateRefreshToken(payload: TokenPayload): string {
   return jwt.sign(payload, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiresIn,
   });
 }
 
-export function verifyAccessToken(token: string): { id: string; email: string; role: string } {
-  return jwt.verify(token, config.jwt.secret) as { id: string; email: string; role: string };
+export function verifyAccessToken(token: string): TokenPayload {
+  return jwt.verify(token, config.jwt.secret) as TokenPayload;
 }
 
-export function verifyRefreshToken(token: string): { id: string; email: string; role: string } {
-  return jwt.verify(token, config.jwt.refreshSecret) as { id: string; email: string; role: string };
+export function verifyRefreshToken(token: string): TokenPayload {
+  return jwt.verify(token, config.jwt.refreshSecret) as TokenPayload;
 }

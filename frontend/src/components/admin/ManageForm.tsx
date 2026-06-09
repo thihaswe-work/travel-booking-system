@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
+import FileUpload from '@/components/ui/FileUpload';
 import { cn } from '@/lib/utils';
 
 export interface FieldDefinition {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'number' | 'select' | 'date' | 'textarea' | 'json';
+  type: 'text' | 'email' | 'number' | 'select' | 'date' | 'textarea' | 'json' | 'file';
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
@@ -129,6 +130,18 @@ export default function ManageForm({
               onChange={(e) => handleChange(field.name, e.target.value)}
             />
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+          </div>
+        );
+      case 'file':
+        return (
+          <div key={field.name} className="w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {field.label}
+            </label>
+            <FileUpload
+              value={value}
+              onChange={(url) => handleChange(field.name, url)}
+            />
           </div>
         );
       case 'json':

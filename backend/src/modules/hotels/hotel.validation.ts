@@ -14,8 +14,9 @@ export const createHotelSchema = z.object({
   name: z.string().min(1).max(255),
   address: z.string().optional(),
   starRating: z.number().int().min(1).max(5),
+  pricePerNight: z.number().positive(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
   rooms: z.array(roomSchema).optional(),
 });
 
@@ -24,8 +25,9 @@ export const updateHotelSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   address: z.string().optional(),
   starRating: z.number().int().min(1).max(5).optional(),
+  pricePerNight: z.number().positive().optional(),
   description: z.string().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')),
   rooms: z.array(roomSchema).optional(),
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { get, patch, getApiError } from '@/lib/api';
+import { get, post, patch, getApiError } from '@/lib/api';
 import Table, { Column } from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
@@ -11,10 +11,10 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import type { User, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
-import { Search, Users as UsersIcon } from 'lucide-react';
+import { Ban, Plus, Search, ShieldOff, Users as UsersIcon } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
-const userFields: FieldDefinition[] = [
+const editUserFields: FieldDefinition[] = [
   { name: 'firstName', label: 'First Name', type: 'text', required: true },
   { name: 'lastName', label: 'Last Name', type: 'text', required: true },
   { name: 'email', label: 'Email', type: 'email', required: true },
@@ -30,6 +30,18 @@ const userFields: FieldDefinition[] = [
   ]},
 ];
 
+const createUserFields: FieldDefinition[] = [
+  { name: 'firstName', label: 'First Name', type: 'text', required: true },
+  { name: 'lastName', label: 'Last Name', type: 'text', required: true },
+  { name: 'email', label: 'Email', type: 'email', required: true },
+  { name: 'phone', label: 'Phone', type: 'text' },
+  { name: 'password', label: 'Password', type: 'text', required: true },
+  { name: 'role', label: 'Role', type: 'select', options: [
+    { value: 'customer', label: 'Customer' },
+    { value: 'travel_agent', label: 'Travel Agent' },
+  ], required: true },
+];
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<PaginatedApiResponse<User> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +50,7 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -46,7 +59,7 @@ export default function AdminUsersPage() {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (search) params.query = search;
       if (roleFilter) params.role = roleFilter;
-      const data = await get<PaginatedApiResponse<User>>('/admin/users', params);
+      const data = await get<PaginatedApiResponse<User>>('/users', params);
       setUsers(data);
     } catch {
       toast.error('Failed to load users');
@@ -63,7 +76,7 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
     setSaving(true);
     try {
-      await patch(`/admin/users/${selectedUser.id}`, {
+      await patch(`/users/${selectedUser.id}`, {
         ...data,
         isActive: data.isActive === 'true',
       });
@@ -74,6 +87,30 @@ export default function AdminUsersPage() {
       toast.error(getApiError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreate = async (data: Record<string, unknown>) => {
+    setSaving(true);
+    try {
+      await post('/users', data);
+      toast.success('User created');
+      setCreateModalOpen(false);
+      fetchUsers();
+    } catch (err) {
+      toast.error(getApiError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleBan = async (user: User) => {
+    try {
+      await patch(`/users/${user.id}`, { isActive: !user.isActive });
+      toast.success(user.isActive ? 'User deactivated' : 'User activated');
+      fetchUsers();
+    } catch (err) {
+      toast.error(getApiError(err));
     }
   };
 
@@ -88,10 +125,20 @@ export default function AdminUsersPage() {
     )},
     { key: 'isActive', header: 'Status', render: (u) => (
       <Badge variant={u.isActive ? 'success' : 'danger'} size="sm">
-        {u.isActive ? 'Active' : 'Inactive'}
+        {u.isActive ? 'Active' : 'Banned'}
       </Badge>
     )},
     { key: 'createdAt', header: 'Joined', render: (u) => formatDate(u.createdAt) },
+    { key: 'actions', header: 'Actions', render: (u) => (
+      <Button
+        variant={u.isActive ? 'danger' : 'primary'}
+        size="sm"
+        onClick={(e) => { e.stopPropagation(); handleToggleBan(u); }}
+      >
+        {u.isActive ? <Ban className="w-4 h-4 mr-1" /> : <ShieldOff className="w-4 h-4 mr-1" />}
+        {u.isActive ? 'Ban' : 'Unban'}
+      </Button>
+    )},
   ];
 
   return (
@@ -101,6 +148,9 @@ export default function AdminUsersPage() {
           <UsersIcon className="w-6 h-6 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
         </div>
+        <Button variant="primary" onClick={() => setCreateModalOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Create User
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -165,6 +215,20 @@ export default function AdminUsersPage() {
       )}
 
       <Modal
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Create User"
+        size="lg"
+      >
+        <ManageForm
+          fields={createUserFields}
+          onSubmit={handleCreate}
+          loading={saving}
+          onCancel={() => setCreateModalOpen(false)}
+        />
+      </Modal>
+
+      <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Edit User"
@@ -172,7 +236,7 @@ export default function AdminUsersPage() {
       >
         {selectedUser && (
           <ManageForm
-            fields={userFields}
+            fields={editUserFields}
             initialData={{
               ...selectedUser,
               isActive: String(selectedUser.isActive),

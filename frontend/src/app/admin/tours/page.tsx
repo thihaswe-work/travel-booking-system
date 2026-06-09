@@ -1,30 +1,37 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { get, post, patch, del, getApiError } from '@/lib/api';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { get, post, put, patch, del, getApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import Table, { Column } from '@/components/ui/Table';
 import Modal from '@/components/ui/Modal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ManageForm, { FieldDefinition } from '@/components/admin/ManageForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import type { Tour, PaginatedApiResponse } from '@/types';
+import type { Destination, Tour, PaginatedApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Compass, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
-const tourFields: FieldDefinition[] = [
-  { name: 'destinationId', label: 'Destination ID', type: 'text', required: true },
-  { name: 'name', label: 'Tour Name', type: 'text', required: true },
-  { name: 'description', label: 'Description', type: 'textarea', required: true },
-  { name: 'durationDays', label: 'Duration (days)', type: 'number', required: true },
-  { name: 'pricePerPerson', label: 'Price Per Person', type: 'number', required: true },
-  { name: 'maxCapacity', label: 'Max Capacity', type: 'number', required: true },
-  { name: 'availableSlots', label: 'Available Slots', type: 'number', required: true },
-  { name: 'includes', label: 'Includes', type: 'json' },
-  { name: 'itinerary', label: 'Itinerary', type: 'json' },
-];
+function buildTourFields(destinations: Destination[]): FieldDefinition[] {
+  const destOptions = destinations.map((d) => ({ value: d.id, label: `${d.name}, ${d.country}` }));
+  return [
+    { name: 'destinationId', label: 'Destination', type: 'select', required: true, options: destOptions },
+    { name: 'name', label: 'Tour Name', type: 'text', required: true },
+    { name: 'description', label: 'Description', type: 'textarea', required: true },
+    { name: 'durationDays', label: 'Duration (days)', type: 'number', required: true },
+    { name: 'pricePerPerson', label: 'Price Per Person', type: 'number', required: true },
+    { name: 'maxCapacity', label: 'Max Capacity', type: 'number', required: true },
+    { name: 'availableSlots', label: 'Available Slots', type: 'number', required: true },
+    { name: 'includes', label: 'Includes', type: 'json' },
+    { name: 'itinerary', label: 'Itinerary', type: 'json' },
+  ];
+}
 
 export default function AdminToursPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [tours, setTours] = useState<PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -33,11 +40,18 @@ export default function AdminToursPage() {
   const [saving, setSaving] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Tour | null>(null);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<Tour | null>(null);
+  const [confirmAction, setConfirmAction] = useState<'approve' | 'deactivate'>('approve');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const tourFields = useMemo(() => buildTourFields(destinations), [destinations]);
 
   const fetchTours = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<PaginatedApiResponse<Tour>>('/admin/tours', { page, limit: 10 });
+      const data = await get<PaginatedApiResponse<Tour>>('/tours/all', { page, limit: 10 });
       setTours(data);
     } catch {
       toast.error('Failed to load tours');
@@ -47,6 +61,10 @@ export default function AdminToursPage() {
   }, [page]);
 
   useEffect(() => { fetchTours(); }, [fetchTours]);
+
+  useEffect(() => {
+    get<PaginatedApiResponse<Destination>>('/destinations', { limit: 50 }).then((d) => setDestinations(d.data)).catch(() => {});
+  }, []);
 
   const handleSubmit = async (data: Record<string, unknown>) => {
     setSaving(true);
@@ -59,10 +77,10 @@ export default function AdminToursPage() {
         availableSlots: Number(data.availableSlots),
       };
       if (editTour) {
-        await patch(`/admin/tours/${editTour.id}`, payload);
+        await put(`/tours/${editTour.id}`, payload);
         toast.success('Tour updated');
       } else {
-        await post('/admin/tours', payload);
+        await post('/tours', payload);
         toast.success('Tour created');
       }
       setModalOpen(false);
@@ -75,10 +93,43 @@ export default function AdminToursPage() {
     }
   };
 
+  const handleStatusChange = (tour: Tour, newStatus: string) => {
+    if (newStatus === 'active' && !tour.isActive) {
+      setConfirmTarget(tour);
+      setConfirmAction('approve');
+      setConfirmOpen(true);
+    } else if (newStatus === 'pending' && tour.isActive) {
+      setConfirmTarget(tour);
+      setConfirmAction('deactivate');
+      setConfirmOpen(true);
+    }
+  };
+
+  const handleConfirmStatus = async () => {
+    if (!confirmTarget) return;
+    setConfirmLoading(true);
+    try {
+      if (confirmAction === 'approve') {
+        await patch(`/tours/${confirmTarget.id}/approve`);
+        toast.success('Tour approved');
+      } else {
+        await patch(`/tours/${confirmTarget.id}/deactivate`);
+        toast.success('Tour deactivated');
+      }
+      setConfirmOpen(false);
+      setConfirmTarget(null);
+      fetchTours();
+    } catch (err) {
+      toast.error(getApiError(err));
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await del(`/admin/tours/${deleteTarget.id}`);
+      await del(`/tours/${deleteTarget.id}`);
       toast.success('Tour deleted');
       setDeleteModalOpen(false);
       setDeleteTarget(null);
@@ -94,8 +145,26 @@ export default function AdminToursPage() {
     { key: 'pricePerPerson', header: 'Price', render: (t) => formatCurrency(t.pricePerPerson) },
     { key: 'availableSlots', header: 'Slots', render: (t) => `${t.availableSlots}/${t.maxCapacity}` },
     { key: 'isActive', header: 'Status', render: (t) => (
-      <Badge variant={t.isActive ? 'success' : 'danger'} size="sm">{t.isActive ? 'Active' : 'Inactive'}</Badge>
+      <Badge variant={t.isActive ? 'success' : 'warning'} size="sm">{t.isActive ? 'Active' : 'Pending'}</Badge>
     )},
+    {
+      key: 'actions' as const,
+      header: 'Status' as const,
+      render: (t: Tour) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <select
+            value={t.isActive ? 'active' : 'pending'}
+            onChange={(e) => handleStatusChange(t, e.target.value)}
+            className="block w-full rounded-lg border border-gray-300 px-2 py-1 text-xs shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            {isAdmin && <option value="active">Active</option>}
+            {isAdmin && <option value="pending">Pending</option>}
+            {!isAdmin && t.isActive && <option value="active">Active</option>}
+            {!isAdmin && t.isActive && <option value="pending">Deactivate</option>}
+          </select>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -147,6 +216,17 @@ export default function AdminToursPage() {
           <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setConfirmTarget(null); }}
+        onConfirm={handleConfirmStatus}
+        title={confirmAction === 'approve' ? 'Approve Tour' : 'Deactivate Tour'}
+        message={`Are you sure you want to ${confirmAction === 'approve' ? 'approve' : 'deactivate'} ${confirmTarget?.name}?`}
+        confirmLabel={confirmAction === 'approve' ? 'Approve' : 'Deactivate'}
+        variant={confirmAction === 'approve' ? 'primary' : 'danger'}
+        loading={confirmLoading}
+      />
     </div>
   );
 }

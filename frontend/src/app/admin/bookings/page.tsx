@@ -26,7 +26,7 @@ export default function AdminBookingsPage() {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
       if (typeFilter) params.bookingType = typeFilter;
-      const data = await get<PaginatedApiResponse<Booking>>('/admin/bookings', params);
+      const data = await get<PaginatedApiResponse<Booking>>('/bookings', params);
       setBookings(data);
     } catch {
       toast.error('Failed to load bookings');

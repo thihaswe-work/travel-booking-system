@@ -32,6 +32,11 @@ export async function getUserById(req: Request, res: Response): Promise<void> {
   res.json({ success: true, data: user });
 }
 
+export async function createUser(req: Request, res: Response): Promise<void> {
+  const user = await userService.createByAdmin(req.body);
+  res.status(201).json({ success: true, data: user });
+}
+
 export async function updateUserById(req: Request, res: Response): Promise<void> {
   const user = await userService.updateUser(req.params.id, req.body);
   res.json({ success: true, data: user });

@@ -18,8 +18,8 @@ interface LoginInput {
   password: string;
 }
 
-function excludePassword(user: { passwordHash: string; [key: string]: unknown }) {
-  const { passwordHash, ...rest } = user;
+function excludeSensitive(user: { passwordHash: string; refreshToken?: string | null; [key: string]: unknown }) {
+  const { passwordHash, refreshToken, ...rest } = user;
   return rest;
 }
 
@@ -42,15 +42,15 @@ export async function register(data: RegisterInput) {
     },
   });
 
-  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role });
+  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
+  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
 
   await prisma.user.update({
     where: { id: user.id },
     data: { refreshToken },
   });
 
-  return { user: excludePassword(user), accessToken, refreshToken };
+  return { user: excludeSensitive(user), accessToken, refreshToken };
 }
 
 export async function login(data: LoginInput) {
@@ -68,15 +68,15 @@ export async function login(data: LoginInput) {
     throw new AppError('Account has been deactivated. Contact support.', 401, 'ACCOUNT_INACTIVE');
   }
 
-  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role });
+  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
+  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
 
   await prisma.user.update({
     where: { id: user.id },
     data: { refreshToken },
   });
 
-  return { user: excludePassword(user), accessToken, refreshToken };
+  return { user: excludeSensitive(user), accessToken, refreshToken };
 }
 
 export async function logout(userId: string) {
@@ -87,7 +87,7 @@ export async function logout(userId: string) {
 }
 
 export async function refreshTokens(token: string) {
-  let decoded: { id: string; email: string; role: string };
+  let decoded: { id: string; email: string; role: string; trustLevel?: string; approvedItemsCount?: number };
   try {
     decoded = verifyRefreshToken(token);
   } catch {
@@ -107,8 +107,8 @@ export async function refreshTokens(token: string) {
     throw new AppError('Refresh token has been revoked', 401, 'TOKEN_REVOKED');
   }
 
-  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role });
+  const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
+  const refreshToken = generateRefreshToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });
 
   await prisma.user.update({
     where: { id: user.id },

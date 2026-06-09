@@ -12,26 +12,31 @@ import {
   Building2,
   Compass,
   MapPin,
+  Key,
   ChevronLeft,
 } from 'lucide-react';
 
 const sidebarLinks = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/bookings', label: 'Bookings', icon: BookOpen },
-  { href: '/admin/flights', label: 'Flights', icon: Plane },
-  { href: '/admin/hotels', label: 'Hotels', icon: Building2 },
-  { href: '/admin/tours', label: 'Tours', icon: Compass },
-  { href: '/admin/destinations', label: 'Destinations', icon: MapPin },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['admin', 'travel_agent'] as const },
+  { href: '/admin/users', label: 'Users', icon: Users, roles: ['admin'] as const },
+  { href: '/admin/bookings', label: 'Bookings', icon: BookOpen, roles: ['admin', 'travel_agent'] as const },
+  { href: '/admin/flights', label: 'Flights', icon: Plane, roles: ['admin', 'travel_agent'] as const },
+  { href: '/admin/hotels', label: 'Hotels', icon: Building2, roles: ['admin', 'travel_agent'] as const },
+  { href: '/admin/tours', label: 'Tours', icon: Compass, roles: ['admin', 'travel_agent'] as const },
+  { href: '/admin/destinations', label: 'Destinations', icon: MapPin, roles: ['admin'] as const },
+  { href: '/admin/api-keys', label: 'API Integration', icon: Key, roles: ['admin', 'travel_agent'] as const },
 ];
 
 interface SidebarProps {
+  role: 'admin' | 'travel_agent' | 'customer';
   collapsed: boolean;
   onToggle: () => void;
 }
 
-export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+
+  const visibleLinks = sidebarLinks.filter((link) => (link.roles as readonly string[]).includes(role));
 
   const isActive = (link: (typeof sidebarLinks)[0]) => {
     if (link.exact) return pathname === link.href;
@@ -56,7 +61,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </button>
       </div>
       <nav className="flex-1 px-2 pb-4 space-y-1 overflow-y-auto">
-        {sidebarLinks.map((link) => {
+        {visibleLinks.map((link) => {
           const Icon = link.icon;
           const active = isActive(link);
           return (

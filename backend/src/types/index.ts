@@ -4,6 +4,8 @@ export interface JwtPayload {
   id: string;
   email: string;
   role: string;
+  trustLevel?: string;
+  approvedItemsCount?: number;
 }
 
 export interface AuthenticatedRequest extends Request {

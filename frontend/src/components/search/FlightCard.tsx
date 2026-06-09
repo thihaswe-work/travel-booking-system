@@ -19,7 +19,11 @@ export default function FlightCard({ flight }: FlightCardProps) {
   const depDate = format(parseISO(flight.departureTime), 'MMM dd, yyyy');
   const hours = Math.floor(flight.durationMin / 60);
   const mins = flight.durationMin % 60;
-  const hasSeats = flight.availableSeats > 0;
+  const seats = flight.seats || [];
+  const totalAvailable = seats.reduce((sum, s) => sum + s.availableSeats, 0);
+  const hasSeats = totalAvailable > 0;
+  const minPrice = seats.length > 0 ? Math.min(...seats.map((s) => Number(s.price))) : 0;
+  const seatClasses = seats.map((s) => s.seatClass).join(', ');
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 card-hover">
@@ -61,7 +65,7 @@ export default function FlightCard({ flight }: FlightCardProps) {
         <div className="flex items-center gap-4 lg:flex-col lg:items-end">
           <div className="text-right">
             <p className="text-2xl font-bold text-primary-600">
-              {formatCurrency(flight.basePrice)}
+              from {formatCurrency(minPrice)}
             </p>
             <p className="text-xs text-gray-500">per person</p>
           </div>
@@ -81,9 +85,9 @@ export default function FlightCard({ flight }: FlightCardProps) {
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
         <div className="flex items-center gap-1">
           <Users className="w-3.5 h-3.5" />
-          <span>{flight.availableSeats} seats available</span>
+          <span>{totalAvailable} seats available</span>
         </div>
-        <span>{flight.seatClass}</span>
+        {seatClasses && <span>{seatClasses}</span>}
       </div>
     </div>
   );

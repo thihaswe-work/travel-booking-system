@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+import path from 'path';
+
 export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -17,5 +19,11 @@ export const config = {
   },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
+  upload: {
+    driver: process.env.UPLOAD_DRIVER || 'local',
+    path: path.resolve(__dirname, '../../uploads'),
+    maxFileSize: parseInt(process.env.UPLOAD_MAX_FILE_SIZE || '5242880', 10),
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   },
 };

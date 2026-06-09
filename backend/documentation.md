@@ -146,13 +146,64 @@ GET /users/:id
 
 Admin only.
 
+### Create User (Admin)
+
+```
+POST /users
+```
+
+Admin only. Creates a user with any role, `isActive` defaults to `false`.
+
+```json
+{
+  "email": "newagent@travel.com",
+  "password": "Str0ng!Pass",
+  "firstName": "New",
+  "lastName": "Agent",
+  "role": "travel_agent",
+  "isActive": false
+}
+```
+
 ### Update User (Admin)
 
 ```
 PATCH /users/:id
 ```
 
-Admin only. Same body as profile update.
+Admin only. Can update any profile field plus `role` and `isActive`.
+
+```json
+{ "isActive": true, "role": "travel_agent" }
+```
+
+---
+
+## File Upload
+
+### Upload File
+
+```
+POST /upload
+```
+
+Auth required (admin or agent). Multipart form-data with field `file`.
+
+**Allowed types:** `image/jpeg`, `image/png`, `image/gif`, `image/webp`. **Max size:** 5MB.
+
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "http://localhost:4000/uploads/filename.jpg",
+    "filename": "filename.jpg"
+  }
+}
+```
+
+Returns an absolute URL. Files stored in `backend/uploads/` and served at `/uploads`.
 
 ---
 
@@ -227,7 +278,7 @@ No auth. **Query params:**
 | `page` | number | Default 1 |
 | `limit` | number | Default 20, max 100 |
 
-Returns only active flights. Includes destination data.
+Returns only active flights. Includes destination and seat classes.
 
 ### Get Flight
 
@@ -235,15 +286,15 @@ Returns only active flights. Includes destination data.
 GET /flights/:id
 ```
 
-No auth. Includes destination.
+No auth. Includes destination and seat classes.
 
-### Create Flight (Admin)
+### Create Flight (Admin/Agent)
 
 ```
 POST /flights
 ```
 
-Admin only.
+Admin or travel_agent. Agents' flights created as `isActive: false` (pending admin approval).
 
 ```json
 {
@@ -255,39 +306,46 @@ Admin only.
   "departureTime": "2026-06-10T10:00:00Z",
   "arrivalTime": "2026-06-11T06:00:00Z",
   "durationMin": 780,
-  "seatClass": "economy",
-  "basePrice": 899.00,
-  "availableSeats": 150
+  "seats": [
+    { "seatClass": "economy", "price": 850.00, "totalSeats": 120, "availableSeats": 120 },
+    { "seatClass": "business", "price": 3200.00, "totalSeats": 48, "availableSeats": 48 }
+  ]
 }
 ```
 
-### Update Flight (Admin)
+`seats` array requires at least one entry with `seatClass` (`economy`, `business`, `first`), `price`, `totalSeats`, `availableSeats`.
+
+### Update Flight (Admin/Agent)
 
 ```
 PUT /flights/:id
 ```
 
-Admin only. All fields optional.
+Admin or travel_agent (own items only). All fields optional.
 
-### Delete Flight (Admin)
+### Delete Flight (Admin/Agent)
 
 ```
 DELETE /flights/:id
 ```
 
-Admin only. Soft-delete.
+Soft-delete.
 
-### Update Seats (Admin)
+### Approve Flight (Admin)
 
 ```
-PATCH /flights/:id/seats
+PATCH /flights/:id/approve
 ```
 
-Admin only.
+Admin only. Sets `isActive = true` (activates agent-created items).
 
-```json
-{ "available_seats": 120 }
+### Deactivate Flight (Admin/Agent)
+
 ```
+PATCH /flights/:id/deactivate
+```
+
+Admin can deactivate any; agents can only deactivate their own. Sets `isActive = false`.
 
 ---
 
@@ -319,13 +377,13 @@ GET /hotels/:id
 
 No auth. Includes destination and active rooms.
 
-### Create Hotel (Admin)
+### Create Hotel (Admin/Agent)
 
 ```
 POST /hotels
 ```
 
-Admin only.
+Admin or travel_agent. Agents' hotels created as `isActive: false` (pending admin approval).
 
 ```json
 {
@@ -333,6 +391,7 @@ Admin only.
   "name": "Grand Hotel Tokyo",
   "address": "1-1-1 Marunouchi",
   "starRating": 5,
+  "pricePerNight": 350,
   "description": "...",
   "imageUrl": "...",
   "rooms": [
@@ -341,21 +400,39 @@ Admin only.
 }
 ```
 
-### Update Hotel (Admin)
+`pricePerNight` is required on the hotel and typically set to the minimum room price.
+
+### Update Hotel (Admin/Agent)
 
 ```
 PUT /hotels/:id
 ```
 
-Admin only. All fields optional.
+Admin or travel_agent (own items only). All fields optional.
 
-### Delete Hotel (Admin)
+### Delete Hotel (Admin/Agent)
 
 ```
 DELETE /hotels/:id
 ```
 
-Admin only. Soft-delete (also soft-deletes all rooms).
+Soft-delete (also soft-deletes all rooms).
+
+### Approve Hotel (Admin)
+
+```
+PATCH /hotels/:id/approve
+```
+
+Admin only. Sets `isActive = true`.
+
+### Deactivate Hotel (Admin/Agent)
+
+```
+PATCH /hotels/:id/deactivate
+```
+
+Admin can deactivate any; agents only their own.
 
 ---
 
@@ -389,13 +466,13 @@ GET /tours/:id
 
 No auth. Includes destination.
 
-### Create Tour (Admin)
+### Create Tour (Admin/Agent)
 
 ```
 POST /tours
 ```
 
-Admin only.
+Admin or travel_agent. Agents' tours created as `isActive: false` (pending admin approval).
 
 ```json
 {
@@ -411,21 +488,37 @@ Admin only.
 }
 ```
 
-### Update Tour (Admin)
+### Update Tour (Admin/Agent)
 
 ```
 PUT /tours/:id
 ```
 
-Admin only. All fields optional.
+Admin or travel_agent (own items only). All fields optional.
 
-### Delete Tour (Admin)
+### Delete Tour (Admin/Agent)
 
 ```
 DELETE /tours/:id
 ```
 
-Admin only. Soft-delete.
+Soft-delete.
+
+### Approve Tour (Admin)
+
+```
+PATCH /tours/:id/approve
+```
+
+Admin only. Sets `isActive = true`.
+
+### Deactivate Tour (Admin/Agent)
+
+```
+PATCH /tours/:id/deactivate
+```
+
+Admin can deactivate any; agents only their own.
 
 ---
 
@@ -662,21 +755,36 @@ GET /admin/analytics/popular
 | departureTime | datetime | |
 | arrivalTime | datetime | |
 | durationMin | int | Minutes |
+| createdById | UUID | FK → User (creator) |
+| isActive | boolean | Default: true |
+
+### FlightSeat
+
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| flightId | UUID | FK → Flight |
 | seatClass | enum | `economy`, `business`, `first` |
-| basePrice | decimal(10,2) | |
+| price | decimal(10,2) | |
+| totalSeats | int | |
 | availableSeats | int | |
+
+Unique constraint on `(flightId, seatClass)` — max 3 seat classes per flight.
 
 ### Hotel
 
-| Field | Type |
-|---|---|
-| id | UUID |
-| destinationId | UUID |
-| name | string |
-| address | string? |
-| starRating | int (1-5) |
-| description | text? |
-| imageUrl | string? |
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| destinationId | UUID | FK → Destination |
+| name | string | |
+| address | string? | |
+| starRating | int (1-5) | |
+| description | text? | |
+| imageUrl | string? | |
+| pricePerNight | decimal(10,2) | Minimum room price |
+| createdById | UUID | FK → User (creator) |
+| isActive | boolean | Default: true |
 
 ### HotelRoom
 
@@ -693,18 +801,20 @@ GET /admin/analytics/popular
 
 ### Tour
 
-| Field | Type |
-|---|---|
-| id | UUID |
-| destinationId | UUID |
-| name | string |
-| description | text? |
-| durationDays | int |
-| pricePerPerson | decimal(10,2) |
-| maxCapacity | int |
-| availableSlots | int |
-| includes | json? |
-| itinerary | json? |
+| Field | Type | Notes |
+|---|---|---|
+| id | UUID | |
+| destinationId | UUID | FK → Destination |
+| name | string | |
+| description | text? | |
+| durationDays | int | |
+| pricePerPerson | decimal(10,2) | |
+| maxCapacity | int | |
+| availableSlots | int | |
+| includes | json? | |
+| itinerary | json? | |
+| createdById | UUID | FK → User (creator) |
+| isActive | boolean | Default: true |
 
 ### Booking
 
@@ -825,15 +935,13 @@ npm test           # Jest tests
 
 npx prisma migrate dev   # Run migrations
 npx prisma db push       # Push schema changes
-npm run seed             # Seed database (3 users, 3 destinations, 9 flights, 6 hotels, 6 tours)
+npm run seed             # Seed database (3 users, 3 destinations, 5 flights, 6 hotels, 6 tours)
 npm run db:seed          # Alias for seed
 ```
 
 ### Default seed users
 
-Seeded via `src/seed.ts` (also at `prisma/seed.ts`). Run `npm run seed` after migrations. Clears all existing data before seeding.
-
-| Email | Role | Password |
+Seeded via `prisma/seed.ts`. Run `npm run seed` after migrations. Clears all existing data before seeding.
 
 | Email | Role | Password |
 |---|---|---|

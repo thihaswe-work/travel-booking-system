@@ -38,12 +38,14 @@ export default function TourDetailPage() {
     if (!tour) return;
     setBooking(true);
     try {
-      const totalAmount = tour.pricePerPerson * participants;
       const res = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'tour',
-        tourId: tour.id,
-        participants,
-        totalAmount,
+        items: [{
+          itemType: 'tour',
+          itemId: tour.id,
+          quantity: participants,
+        }],
+        paymentMethod: 'cash_on_arrival',
       });
       toast.success('Booking created!');
       router.push(`/booking/checkout/${res.data.id}`);

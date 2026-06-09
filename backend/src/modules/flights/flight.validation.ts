@@ -2,18 +2,23 @@ import { z } from 'zod';
 
 const seatClassEnum = z.enum(['economy', 'business', 'first']);
 
+const seatSchema = z.object({
+  seatClass: seatClassEnum,
+  price: z.number().positive(),
+  availableSeats: z.number().int().min(0),
+  totalSeats: z.number().int().min(0),
+});
+
 export const createFlightSchema = z.object({
   destinationId: z.string().uuid(),
   airline: z.string().min(1).max(255),
   flightNumber: z.string().min(1).max(50),
   departureCity: z.string().min(1).max(255),
   arrivalCity: z.string().min(1).max(255),
-  departureTime: z.string().datetime(),
-  arrivalTime: z.string().datetime(),
+  departureTime: z.string(),
+  arrivalTime: z.string(),
   durationMin: z.number().int().positive(),
-  seatClass: seatClassEnum.default('economy'),
-  basePrice: z.number().positive(),
-  availableSeats: z.number().int().min(0),
+  seats: z.array(seatSchema).min(1),
 });
 
 export const updateFlightSchema = z.object({
@@ -22,12 +27,10 @@ export const updateFlightSchema = z.object({
   flightNumber: z.string().min(1).max(50).optional(),
   departureCity: z.string().min(1).max(255).optional(),
   arrivalCity: z.string().min(1).max(255).optional(),
-  departureTime: z.string().datetime().optional(),
-  arrivalTime: z.string().datetime().optional(),
+  departureTime: z.string().optional(),
+  arrivalTime: z.string().optional(),
   durationMin: z.number().int().positive().optional(),
-  seatClass: seatClassEnum.optional(),
-  basePrice: z.number().positive().optional(),
-  availableSeats: z.number().int().min(0).optional(),
+  seats: z.array(seatSchema).optional(),
 });
 
 export const listFlightsQuerySchema = z.object({
@@ -38,7 +41,7 @@ export const listFlightsQuerySchema = z.object({
   min_price: z.string().optional(),
   max_price: z.string().optional(),
   destination_id: z.string().optional(),
-  sort: z.enum(['price', 'duration', 'departureTime']).optional().default('departureTime'),
+  sort: z.enum(['duration', 'departureTime']).optional().default('departureTime'),
   page: z.string().optional(),
   limit: z.string().optional(),
 });

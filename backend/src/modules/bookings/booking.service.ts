@@ -46,14 +46,21 @@ export const bookingService = {
       let unitPrice = 0;
 
       if (item.itemType === 'flight') {
-        const flight = await prisma.flight.findUnique({ where: { id: item.itemId } });
+        const flight = await prisma.flight.findUnique({
+          where: { id: item.itemId },
+          include: { seats: true },
+        });
         if (!flight) throw new AppError('Flight not found', 404, 'ITEM_NOT_FOUND');
         if (!flight.isActive) throw new AppError('Flight is not available', 400, 'ITEM_NOT_AVAILABLE');
-        if (flight.availableSeats < item.quantity) {
+
+        const seatClass = item.passengers?.[0]?.seatClass || 'economy';
+        const seat = flight.seats.find((s) => s.seatClass === seatClass);
+        if (!seat) throw new AppError('Seat class not available on this flight', 400, 'SEAT_CLASS_NOT_FOUND');
+        if (seat.availableSeats < item.quantity) {
           throw new AppError('Insufficient available seats', 400, 'INSUFFICIENT_SEATS');
         }
         const numPassengers = item.passengers?.length || item.quantity;
-        unitPrice = Number(flight.basePrice) * numPassengers;
+        unitPrice = Number(seat.price) * numPassengers;
       } else if (item.itemType === 'hotel') {
         const room = await prisma.hotelRoom.findUnique({ where: { id: item.itemId } });
         if (!room) throw new AppError('Hotel room not found', 404, 'ITEM_NOT_FOUND');
@@ -122,10 +129,16 @@ export const bookingService = {
 
       for (const d of detailInputs) {
         if (d.item.itemType === 'flight') {
-          await tx.flight.update({
-            where: { id: d.item.itemId },
-            data: { availableSeats: { decrement: d.item.quantity } },
+          const seatClass = d.item.passengers?.[0]?.seatClass || 'economy';
+          const flightSeat = await tx.flightSeat.findUnique({
+            where: { flightId_seatClass: { flightId: d.item.itemId, seatClass: seatClass as any } },
           });
+          if (flightSeat) {
+            await tx.flightSeat.update({
+              where: { id: flightSeat.id },
+              data: { availableSeats: { decrement: d.item.quantity } },
+            });
+          }
         } else if (d.item.itemType === 'hotel') {
           await tx.hotelRoom.update({
             where: { id: d.item.itemId },
@@ -269,7 +282,7 @@ export const bookingService = {
   async cancel(bookingId: string, userId: string, userRole: string, reason?: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { details: true, payments: true },
+      include: { details: { include: { passengers: true } }, payments: true },
     });
 
     if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
@@ -288,10 +301,16 @@ export const bookingService = {
 
       for (const detail of booking.details) {
         if (detail.itemType === 'flight') {
-          await tx.flight.update({
-            where: { id: detail.itemId },
-            data: { availableSeats: { increment: detail.quantity } },
+          const seatClass = detail.passengers?.[0]?.seatClass || 'economy';
+          const flightSeat = await tx.flightSeat.findUnique({
+            where: { flightId_seatClass: { flightId: detail.itemId, seatClass: seatClass as any } },
           });
+          if (flightSeat) {
+            await tx.flightSeat.update({
+              where: { id: flightSeat.id },
+              data: { availableSeats: { increment: detail.quantity } },
+            });
+          }
         } else if (detail.itemType === 'hotel') {
           await tx.hotelRoom.update({
             where: { id: detail.itemId },
@@ -325,9 +344,12 @@ export const bookingService = {
 
   async getInventoryStatus(itemType: string, itemId: string) {
     if (itemType === 'flight') {
-      const flight = await prisma.flight.findUnique({ where: { id: itemId } });
+      const flight = await prisma.flight.findUnique({
+        where: { id: itemId },
+        include: { seats: true },
+      });
       if (!flight) throw new AppError('Flight not found', 404, 'NOT_FOUND');
-      return { itemType, itemId, available: flight.availableSeats, isActive: flight.isActive };
+      return { itemType, itemId, seats: flight.seats, isActive: flight.isActive };
     }
     if (itemType === 'hotel') {
       const room = await prisma.hotelRoom.findUnique({ where: { id: itemId } });

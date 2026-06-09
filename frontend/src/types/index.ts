@@ -17,6 +17,8 @@ export interface PaginationMeta {
   hasPrev: boolean;
 }
 
+export type AgentTrustLevel = 'new' | 'trusted';
+
 export interface User {
   id: string;
   email: string;
@@ -26,6 +28,8 @@ export interface User {
   phone?: string;
   preferences?: Record<string, unknown>;
   isActive: boolean;
+  trustLevel?: AgentTrustLevel;
+  approvedItemsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +64,18 @@ export interface Destination {
   updatedAt: string;
 }
 
+export interface FlightSeat {
+  id: string;
+  flightId: string;
+  seatClass: 'economy' | 'business' | 'first';
+  price: number;
+  availableSeats: number;
+  totalSeats: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Flight {
   id: string;
   destinationId: string;
@@ -70,13 +86,11 @@ export interface Flight {
   departureTime: string;
   arrivalTime: string;
   durationMin: number;
-  seatClass: 'economy' | 'business' | 'first';
-  basePrice: number;
-  availableSeats: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   destination?: Destination;
+  seats?: FlightSeat[];
 }
 
 export interface Hotel {
@@ -85,6 +99,7 @@ export interface Hotel {
   name: string;
   address: string;
   starRating: number;
+  pricePerNight: number;
   description: string;
   imageUrl?: string;
   isActive: boolean;
@@ -219,6 +234,9 @@ export interface AnalyticsOverview {
   revenueTrend: number;
   userTrend: number;
   todayBookingTrend: number;
+  pendingFlights: number;
+  pendingHotels: number;
+  pendingTours: number;
 }
 
 export interface ApiError {
@@ -254,4 +272,15 @@ export interface SearchFilters {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  isActive: boolean;
+  lastUsedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  plainKey?: string;
 }

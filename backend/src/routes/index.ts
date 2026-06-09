@@ -9,6 +9,9 @@ import bookingRoutes from '../modules/bookings/booking.routes';
 import paymentRoutes from '../modules/payments/payment.routes';
 import notificationRoutes from '../modules/notifications/notification.routes';
 import adminRoutes from '../modules/admin/admin.routes';
+import uploadRoutes from '../modules/upload/upload.routes';
+import apiKeyRoutes from '../modules/api-keys/api-key.routes';
+import publicRoutes from '../modules/api-keys/public.routes';
 
 const router = Router();
 
@@ -22,5 +25,8 @@ router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/upload', uploadRoutes);
+router.use('/api-keys', apiKeyRoutes);
+router.use('/public', publicRoutes);
 
 export default router;

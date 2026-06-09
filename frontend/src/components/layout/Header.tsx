@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -17,6 +18,7 @@ const navLinks = [
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
 
@@ -99,20 +101,20 @@ export default function Header() {
                       >
                         <BookOpen className="w-4 h-4" /> My Bookings
                       </Link>
-                      {user?.role === 'admin' && (
+                      {(user?.role === 'admin' || user?.role === 'travel_agent') && (
                         <Link
                           href="/admin"
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
-                          Admin Panel
+                          {user?.role === 'admin' ? 'Admin Panel' : 'Agent Panel'}
                         </Link>
                       )}
                       <hr className="my-1" />
                       <button
                         onClick={() => {
                           setUserMenuOpen(false);
-                          logout();
+                          setLogoutConfirmOpen(true);
                         }}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
                       >
@@ -195,10 +197,19 @@ export default function Header() {
                 >
                   <BookOpen className="w-4 h-4" /> My Bookings
                 </Link>
+                {(user?.role === 'admin' || user?.role === 'travel_agent') && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    {user?.role === 'admin' ? 'Admin Panel' : 'Agent Panel'}
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     setMobileOpen(false);
-                    logout();
+                    setLogoutConfirmOpen(true);
                   }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 w-full"
                 >
@@ -226,6 +237,15 @@ export default function Header() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => { setLogoutConfirmOpen(false); logout(); }}
+        title="Logout"
+        message="Are you sure you want to log out?"
+        confirmLabel="Logout"
+        variant="danger"
+      />
     </header>
   );
 }

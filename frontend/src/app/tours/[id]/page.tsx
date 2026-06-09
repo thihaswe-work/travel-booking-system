@@ -8,6 +8,7 @@ import TourBookingForm from '@/components/booking/TourBookingForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Tour, Booking, ApiResponse } from '@/types';
 import { Clock, Users, Check, MapPin, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,6 +20,8 @@ export default function TourDetailPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingParticipants, setPendingParticipants] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTour = async () => {
@@ -35,7 +38,13 @@ export default function TourDetailPage() {
   }, [params.id]);
 
   const handleBooking = async (participants: number) => {
-    if (!tour) return;
+    setPendingParticipants(participants);
+    setConfirmOpen(true);
+  };
+
+  const confirmBooking = async () => {
+    if (!tour || pendingParticipants === null) return;
+    setConfirmOpen(false);
     setBooking(true);
     try {
       const res = await post<ApiResponse<Booking>>('/bookings', {
@@ -43,7 +52,7 @@ export default function TourDetailPage() {
         items: [{
           itemType: 'tour',
           itemId: tour.id,
-          quantity: participants,
+          quantity: pendingParticipants,
         }],
         paymentMethod: 'cash_on_arrival',
       });
@@ -53,6 +62,7 @@ export default function TourDetailPage() {
       toast.error(getApiError(err));
     } finally {
       setBooking(false);
+      setPendingParticipants(null);
     }
   };
 
@@ -187,6 +197,17 @@ export default function TourDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setPendingParticipants(null); }}
+        onConfirm={confirmBooking}
+        title="Confirm Booking"
+        message={`Book ${tour.name} for ${pendingParticipants} participant${(pendingParticipants || 0) > 1 ? 's' : ''}?`}
+        confirmLabel="Confirm Booking"
+        loading={booking}
+        variant="primary"
+      />
     </div>
   );
 }

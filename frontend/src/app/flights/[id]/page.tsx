@@ -8,6 +8,7 @@ import FlightBookingForm from '@/components/booking/FlightBookingForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Flight, Booking, BookingPassenger, ApiResponse } from '@/types';
 import { Plane, Clock, Calendar, Users, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,6 +20,8 @@ export default function FlightDetailPage() {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<{ passengers: BookingPassenger[]; seatClass: string } | null>(null);
 
   useEffect(() => {
     const fetchFlight = async () => {
@@ -35,6 +38,13 @@ export default function FlightDetailPage() {
   }, [params.id]);
 
   const handleBooking = async (passengers: BookingPassenger[], seatClass: string) => {
+    setPendingBooking({ passengers, seatClass });
+    setConfirmOpen(true);
+  };
+
+  const confirmBooking = async () => {
+    if (!pendingBooking) return;
+    setConfirmOpen(false);
     setBooking(true);
     try {
       const bookingData = await post<ApiResponse<Booking>>('/bookings', {
@@ -42,13 +52,13 @@ export default function FlightDetailPage() {
         items: [{
           itemType: 'flight',
           itemId: flight!.id,
-          quantity: passengers.length,
-          passengers: passengers.map((p) => ({
+          quantity: pendingBooking.passengers.length,
+          passengers: pendingBooking.passengers.map((p) => ({
             firstName: p.firstName,
             lastName: p.lastName,
             documentType: p.documentType,
             documentNumber: p.documentNumber,
-            seatClass,
+            seatClass: pendingBooking.seatClass,
           })),
         }],
         paymentMethod: 'cash_on_arrival',
@@ -60,6 +70,7 @@ export default function FlightDetailPage() {
       toast.error(getApiError(err));
     } finally {
       setBooking(false);
+      setPendingBooking(null);
     }
   };
 
@@ -183,6 +194,17 @@ export default function FlightDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setPendingBooking(null); }}
+        onConfirm={confirmBooking}
+        title="Confirm Booking"
+        message={`Book ${flight.airline} ${flight.flightNumber} (${pendingBooking?.seatClass}) for ${pendingBooking?.passengers.length} passenger${(pendingBooking?.passengers.length || 0) > 1 ? 's' : ''}?`}
+        confirmLabel="Confirm Booking"
+        loading={booking}
+        variant="primary"
+      />
     </div>
   );
 }

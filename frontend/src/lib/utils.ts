@@ -29,7 +29,8 @@ export function formatDateTime(date: string | Date): string {
   return format(date, 'MMM dd, yyyy HH:mm');
 }
 
-export function getStatusColor(status: string): string {
+export function getStatusColor(status?: string): string {
+  if (!status) return 'bg-gray-100 text-gray-800 border-gray-200';
   const statusMap: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     confirmed: 'bg-green-100 text-green-800 border-green-200',
@@ -41,7 +42,8 @@ export function getStatusColor(status: string): string {
   return statusMap[status.toLowerCase()] || 'bg-gray-100 text-gray-800 border-gray-200';
 }
 
-export function getBookingTypeLabel(type: string): string {
+export function getBookingTypeLabel(type?: string): string {
+  if (!type) return '';
   const typeMap: Record<string, string> = {
     flight: 'Flight',
     hotel: 'Hotel',

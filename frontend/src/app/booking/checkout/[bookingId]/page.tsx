@@ -6,7 +6,7 @@ import { get, post, getApiError } from '@/lib/api';
 import BookingSummary from '@/components/booking/BookingSummary';
 import PaymentForm from '@/components/booking/PaymentForm';
 import Spinner from '@/components/ui/Spinner';
-import type { Booking } from '@/types';
+import type { Booking, ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -21,9 +21,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const data = await get<Booking>(`/bookings/${params.bookingId}`);
-        setBooking(data);
-        if (data.status === 'confirmed') {
+        const res = await get<ApiResponse<Booking>>(`/bookings/${params.bookingId}`);
+        setBooking(res.data);
+        if (res.data.status === 'confirmed') {
           router.push(`/booking/${params.bookingId}`);
         }
       } catch {

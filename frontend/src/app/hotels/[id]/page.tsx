@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import HotelBookingForm from '@/components/booking/HotelBookingForm';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Hotel, Booking, ApiResponse } from '@/types';
 import { MapPin, Star, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,6 +19,8 @@ export default function HotelDetailPage() {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<{ roomId: string; checkIn: string; checkOut: string; quantity: number } | null>(null);
 
   useEffect(() => {
     const fetchHotel = async () => {
@@ -34,17 +37,23 @@ export default function HotelDetailPage() {
   }, [params.id]);
 
   const handleBooking = async (roomId: string, checkIn: string, checkOut: string, quantity: number) => {
-    if (!hotel) return;
+    setPendingBooking({ roomId, checkIn, checkOut, quantity });
+    setConfirmOpen(true);
+  };
+
+  const confirmBooking = async () => {
+    if (!hotel || !pendingBooking) return;
+    setConfirmOpen(false);
     setBooking(true);
     try {
       const res = await post<ApiResponse<Booking>>('/bookings', {
         bookingType: 'hotel',
         items: [{
           itemType: 'hotel',
-          itemId: roomId,
-          quantity,
-          checkInDate: checkIn,
-          checkOutDate: checkOut,
+          itemId: pendingBooking.roomId,
+          quantity: pendingBooking.quantity,
+          checkInDate: pendingBooking.checkIn,
+          checkOutDate: pendingBooking.checkOut,
         }],
         paymentMethod: 'cash_on_arrival',
       });
@@ -54,6 +63,7 @@ export default function HotelDetailPage() {
       toast.error(getApiError(err));
     } finally {
       setBooking(false);
+      setPendingBooking(null);
     }
   };
 
@@ -150,6 +160,17 @@ export default function HotelDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setPendingBooking(null); }}
+        onConfirm={confirmBooking}
+        title="Confirm Booking"
+        message={`Book ${hotel.name}${pendingBooking ? ` (${pendingBooking.checkIn} to ${pendingBooking.checkOut}, ${pendingBooking.quantity} room${pendingBooking.quantity > 1 ? 's' : ''})` : ''}?`}
+        confirmLabel="Confirm Booking"
+        loading={booking}
+        variant="primary"
+      />
     </div>
   );
 }

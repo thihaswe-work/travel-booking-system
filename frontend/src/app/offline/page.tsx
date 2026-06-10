@@ -1,27 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { WifiOff, RefreshCw, Home, Plane, Building2, Compass } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 export default function OfflinePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [checking, setChecking] = useState(false);
 
-  const handleRetry = async () => {
-    setChecking(true);
+  const checkConnection = useCallback(async (): Promise<boolean> => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       await fetch(`${API_URL}/health`, { signal: controller.signal });
       clearTimeout(timeoutId);
-      router.push('/');
+      return true;
     } catch {
-      setChecking(false);
+      return false;
     }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const online = await checkConnection();
+      if (online) {
+        const redirect = searchParams.get('redirect') || '/';
+        router.push(redirect);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [checkConnection, router, searchParams]);
+
+  const handleRetry = async () => {
+    setChecking(true);
+    const online = await checkConnection();
+    if (online) {
+      const redirect = searchParams.get('redirect') || '/';
+      router.push(redirect);
+    }
+    setChecking(false);
   };
 
   return (
@@ -34,6 +56,9 @@ export default function OfflinePage() {
         <p className="text-gray-600 mb-6">
           We can&apos;t reach our servers right now. This could be a network issue
           or our servers may be temporarily unavailable.
+        </p>
+        <p className="text-xs text-gray-400 mb-6">
+          Auto-reconnecting every 5 seconds...
         </p>
         <button
           onClick={handleRetry}

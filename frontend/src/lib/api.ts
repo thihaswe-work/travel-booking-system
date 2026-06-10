@@ -39,6 +39,13 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    if (!error.response && typeof window !== 'undefined') {
+      if (!window.location.pathname.startsWith('/offline')) {
+        window.location.href = '/offline?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url?.includes('/auth/')) {
         return Promise.reject(error);

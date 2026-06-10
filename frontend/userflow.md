@@ -340,6 +340,22 @@ Booking flow (transactional):
     │                     │── COMMIT ───────────────►│
     │◄── booking ────────│                          │
 
+Offline / Network Error flow:
+  Browser                            Backend
+    │                                     │
+    │── Any API request ─────────────────►│
+    │   (no response / network error)     │
+    │                                     │
+    │← Axios error (no error.response)    │
+    │                                     │
+    │── Redirect to /offline?redirect=    │
+    │   /page-user-was-on                 │
+    │                                     │
+    │   OfflinePage polls /health every   │
+    │   5s until server responds          │
+    │                                     │
+    │── Server responds → push(redirect) ►│
+
 Search flow with autocomplete:
     │                     │                          │
     │── GET /flights?departure_city=New ────────────►│

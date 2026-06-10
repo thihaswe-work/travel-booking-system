@@ -608,6 +608,16 @@ All require `X-API-Key` header. Supports pagination on list endpoints.
 
 Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`. Multer errors return proper 400 status codes.
 
+### Offline / Network Error ✅
+
+When any API request fails with a network error (no response), the frontend:
+1. Intercepts it in the Axios response interceptor
+2. Redirects to `/offline?redirect=/original-path`
+3. OfflinePage polls `/health` every 5 seconds
+4. Auto-redirects back to the original path when the server responds
+5. OfflineBanner component (`/components/layout/OfflineBanner.tsx`) also monitors `navigator.onLine` events and periodic health checks
+6. Banner is hidden when on `/offline` page to avoid double UI
+
 ### Notifications ✅ (all implemented)
 
 | Method | Endpoint                       | Description                  | Auth  |

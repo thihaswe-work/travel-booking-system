@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { WifiOff, X, RefreshCw } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { WifiOff, X, RefreshCw, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 export default function OfflineBanner() {
+  const pathname = usePathname();
   const [isOffline, setIsOffline] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -49,7 +52,7 @@ export default function OfflineBanner() {
     };
   }, [checkConnection]);
 
-  if (!isOffline || dismissed) return null;
+  if (pathname?.startsWith('/offline') || !isOffline || dismissed) return null;
 
   return (
     <div className="bg-amber-50 border-b border-amber-200">
@@ -57,14 +60,13 @@ export default function OfflineBanner() {
         <div className="flex items-center gap-2 text-amber-800 text-sm">
           <WifiOff className="w-4 h-4 flex-shrink-0" />
           <span>You are currently offline. Some features may be unavailable.</span>
-          <button
-            onClick={checkConnection}
-            disabled={checking}
-            className="ml-1 text-amber-700 underline hover:text-amber-900 font-medium disabled:opacity-50 inline-flex items-center gap-1"
+          <Link
+            href="/offline"
+            className="ml-1 text-amber-700 underline hover:text-amber-900 font-medium inline-flex items-center gap-0.5"
           >
-            <RefreshCw className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} />
-            Retry
-          </button>
+            View offline page
+            <ExternalLink className="w-3 h-3" />
+          </Link>
         </div>
         <button
           onClick={() => setDismissed(true)}

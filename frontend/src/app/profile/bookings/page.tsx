@@ -31,7 +31,7 @@ export default function MyBookingsPage() {
     try {
       const params: Record<string, unknown> = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
-      const data = await get<PaginatedApiResponse<Booking>>('/bookings/my-bookings', params);
+      const data = await get<PaginatedApiResponse<Booking>>('/bookings', params);
       setBookings(data);
     } catch {
       setBookings(null);

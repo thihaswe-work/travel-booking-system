@@ -14,6 +14,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: 'danger' | 'primary';
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmDialog({
@@ -26,11 +27,13 @@ export default function ConfirmDialog({
   cancelLabel = 'Cancel',
   variant = 'danger',
   loading = false,
+  children,
 }: ConfirmDialogProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <p className="text-gray-600 mb-4">{message}</p>
-      <div className="flex gap-3">
+      {children}
+      <div className="flex gap-3 mt-4">
         <Button variant={variant} onClick={onConfirm} loading={loading}>
           {confirmLabel}
         </Button>

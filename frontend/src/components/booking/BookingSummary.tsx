@@ -50,7 +50,7 @@ export default function BookingSummary({ booking, onCancel }: BookingSummaryProp
             booking.status === 'cancelled' ? 'danger' :
             booking.status === 'completed' ? 'info' : 'warning'
           } size="md">
-            {booking.status.toUpperCase()}
+            {(booking.status || '').toUpperCase()}
           </Badge>
         </div>
 

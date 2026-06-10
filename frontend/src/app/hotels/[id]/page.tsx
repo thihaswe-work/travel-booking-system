@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { get, post, getApiError } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 import HotelBookingForm from '@/components/booking/HotelBookingForm';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
@@ -21,6 +22,8 @@ export default function HotelDetailPage() {
   const [booking, setBooking] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingBooking, setPendingBooking] = useState<{ roomId: string; checkIn: string; checkOut: string; quantity: number } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash_on_arrival');
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchHotel = async () => {
@@ -36,8 +39,24 @@ export default function HotelDetailPage() {
     fetchHotel();
   }, [params.id]);
 
+  useEffect(() => {
+    if (!hotel) return;
+    const saved = sessionStorage.getItem(`pendingHotelBooking_${hotel.id}`);
+    if (saved) {
+      sessionStorage.removeItem(`pendingHotelBooking_${hotel.id}`);
+      setPendingBooking(JSON.parse(saved));
+      setConfirmOpen(true);
+    }
+  }, [hotel]);
+
   const handleBooking = async (roomId: string, checkIn: string, checkOut: string, quantity: number) => {
+    if (!isAuthenticated) {
+      sessionStorage.setItem(`pendingHotelBooking_${hotel?.id}`, JSON.stringify({ roomId, checkIn, checkOut, quantity, paymentMethod }));
+      router.push(`/login?redirect=/hotels/${hotel?.id}`);
+      return;
+    }
     setPendingBooking({ roomId, checkIn, checkOut, quantity });
+    setPaymentMethod('cash_on_arrival');
     setConfirmOpen(true);
   };
 
@@ -55,10 +74,14 @@ export default function HotelDetailPage() {
           checkInDate: pendingBooking.checkIn,
           checkOutDate: pendingBooking.checkOut,
         }],
-        paymentMethod: 'cash_on_arrival',
+        paymentMethod,
       });
       toast.success('Booking created!');
-      router.push(`/booking/checkout/${res.data.id}`);
+      if (paymentMethod === 'card') {
+        router.push(`/booking/checkout/${res.data.id}`);
+      } else {
+        router.push(`/booking/${res.data.id}`);
+      }
     } catch (err) {
       toast.error(getApiError(err));
     } finally {
@@ -170,7 +193,27 @@ export default function HotelDetailPage() {
         confirmLabel="Confirm Booking"
         loading={booking}
         variant="primary"
-      />
+      >
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+          <div className="space-y-2">
+            <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === 'cash_on_arrival' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}>
+              <input type="radio" name="method" value="cash_on_arrival" checked={paymentMethod === 'cash_on_arrival'} onChange={() => setPaymentMethod('cash_on_arrival')} className="text-primary-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Cash on Arrival</p>
+                <p className="text-xs text-gray-500">Pay when you arrive</p>
+              </div>
+            </label>
+            <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === 'card' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}>
+              <input type="radio" name="method" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="text-primary-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Card Payment</p>
+                <p className="text-xs text-gray-500">Pay online now</p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

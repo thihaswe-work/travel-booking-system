@@ -7,6 +7,8 @@ interface ListFilters {
   departureCity?: string;
   arrivalCity?: string;
   date?: string;
+  departureTime?: string;
+  arrivalTime?: string;
   seatClass?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -46,13 +48,58 @@ export async function list(filters: ListFilters, query: { page?: string; limit?:
   if (filters.arrivalCity) {
     where.arrivalCity = { contains: filters.arrivalCity, mode: 'insensitive' };
   }
-  if (filters.date) {
-    const dateStart = new Date(filters.date);
-    dateStart.setHours(0, 0, 0, 0);
-    const dateEnd = new Date(filters.date);
-    dateEnd.setHours(23, 59, 59, 999);
-    where.departureTime = { gte: dateStart, lte: dateEnd };
+  const timeRange = (period?: string): { gte: number; lte: number } | null => {
+    if (!period) return null;
+    return {
+      morning: { gte: 6, lte: 11 },
+      afternoon: { gte: 12, lte: 17 },
+      evening: { gte: 18, lte: 23 },
+      night: { gte: 0, lte: 5 },
+    }[period] || null;
+  };
+
+  const depRange = timeRange(filters.departureTime);
+  if (filters.date || depRange) {
+    const depFilter: Prisma.DateTimeFilter = {};
+
+    if (filters.date) {
+      const d = new Date(filters.date);
+      const startH = depRange?.gte ?? 0;
+      const endH = depRange?.lte ?? 23;
+      depFilter.gte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), startH, 0, 0);
+      depFilter.lte = new Date(d.getFullYear(), d.getMonth(), d.getDate(), endH, 59, 59);
+    }
+    where.departureTime = depFilter;
   }
+  if (depRange && !filters.date) {
+    // time-of-day without date: use raw SQL to match hour
+    const ids = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM flights WHERE EXTRACT(HOUR FROM departure_time) >= ${depRange.gte} AND EXTRACT(HOUR FROM departure_time) <= ${depRange.lte}
+    `;
+    where.id = { in: ids.map(r => r.id) };
+  }
+
+  const arrRange = timeRange(filters.arrivalTime);
+  if (arrRange && filters.date) {
+    const d = new Date(filters.date);
+    where.arrivalTime = {
+      gte: new Date(d.getFullYear(), d.getMonth(), d.getDate(), arrRange.gte, 0, 0),
+      lte: new Date(d.getFullYear(), d.getMonth(), d.getDate(), arrRange.lte, 59, 59),
+    };
+  }
+  if (arrRange && !filters.date) {
+    const ids = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM flights WHERE EXTRACT(HOUR FROM arrival_time) >= ${arrRange.gte} AND EXTRACT(HOUR FROM arrival_time) <= ${arrRange.lte}
+    `;
+    if (where.id) {
+      const existing = where.id as { in: string[] };
+      const timeIds = new Set(ids.map(r => r.id));
+      existing.in = existing.in.filter(id => timeIds.has(id));
+    } else {
+      where.id = { in: ids.map(r => r.id) };
+    }
+  }
+
   if (filters.destinationId) {
     where.destinationId = filters.destinationId;
   }

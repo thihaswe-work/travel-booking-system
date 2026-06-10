@@ -251,6 +251,8 @@ export interface SearchFilters {
   departureCity?: string;
   arrivalCity?: string;
   departureDate?: string;
+  departureTime?: string;
+  arrivalTime?: string;
   returnDate?: string;
   seatClass?: string;
   minPrice?: number;

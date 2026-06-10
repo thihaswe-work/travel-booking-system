@@ -83,6 +83,20 @@ export default function SearchFilters({ filters, onChange, type }: SearchFilters
             onChange={(e) => update('departureDate', e.target.value)}
           />
           <Select
+            label="Departure Time"
+            options={[{value:'morning',label:'Morning (6AM-12PM)'},{value:'afternoon',label:'Afternoon (12PM-6PM)'},{value:'evening',label:'Evening (6PM-12AM)'},{value:'night',label:'Night (12AM-6AM)'}]}
+            placeholder="Any time"
+            value={local.departureTime || ''}
+            onChange={(e) => update('departureTime', e.target.value || undefined)}
+          />
+          <Select
+            label="Arrival Time"
+            options={[{value:'morning',label:'Morning (6AM-12PM)'},{value:'afternoon',label:'Afternoon (12PM-6PM)'},{value:'evening',label:'Evening (6PM-12AM)'},{value:'night',label:'Night (12AM-6AM)'}]}
+            placeholder="Any time"
+            value={local.arrivalTime || ''}
+            onChange={(e) => update('arrivalTime', e.target.value || undefined)}
+          />
+          <Select
             label="Seat Class"
             options={seatClassOptions}
             placeholder="All classes"

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, getApiError } from '@/lib/auth';
 import Input from '@/components/ui/Input';
@@ -24,6 +24,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/';
 
   const handleChange = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -53,7 +55,7 @@ export default function RegisterPage() {
         role: form.role as 'customer' | 'travel_agent',
       });
       toast.success('Account created successfully!');
-      router.push('/');
+      router.push(redirect);
     } catch (err) {
       setError(getApiError(err));
     } finally {
@@ -147,7 +149,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Already have an account?{' '}
-            <Link href="/login" className="text-primary-600 font-medium hover:text-primary-700">
+            <Link href={`/login${redirect !== '/' ? `?redirect=${redirect}` : ''}`} className="text-primary-600 font-medium hover:text-primary-700">
               Sign in
             </Link>
           </p>

@@ -7,6 +7,8 @@ export async function list(req: Request, res: Response): Promise<void> {
     departureCity: req.query.departure_city as string | undefined,
     arrivalCity: req.query.arrival_city as string | undefined,
     date: req.query.date as string | undefined,
+    departureTime: req.query.departure_time as string | undefined,
+    arrivalTime: req.query.arrival_time as string | undefined,
     seatClass: req.query.seat_class as string | undefined,
     minPrice: req.query.min_price ? parseFloat(req.query.min_price as string) : undefined,
     maxPrice: req.query.max_price ? parseFloat(req.query.max_price as string) : undefined,

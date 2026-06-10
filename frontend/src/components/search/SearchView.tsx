@@ -26,6 +26,8 @@ export default function SearchView({ type }: SearchViewProps) {
       departureCity: 'departure_city',
       arrivalCity: 'arrival_city',
       departureDate: 'date',
+      departureTime: 'departure_time',
+      arrivalTime: 'arrival_time',
       seatClass: 'seat_class',
       minPrice: 'min_price',
       maxPrice: 'max_price',

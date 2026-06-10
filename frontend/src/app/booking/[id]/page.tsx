@@ -6,7 +6,7 @@ import { get, patch, getApiError } from '@/lib/api';
 import BookingSummary from '@/components/booking/BookingSummary';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import Spinner from '@/components/ui/Spinner';
-import type { Booking } from '@/types';
+import type { Booking, ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function BookingDetailPage() {
@@ -18,8 +18,8 @@ export default function BookingDetailPage() {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const data = await get<Booking>(`/bookings/${params.id}`);
-        setBooking(data);
+        const data = await get<ApiResponse<Booking>>(`/bookings/${params.id}`);
+        setBooking(data.data);
       } catch {
         toast.error('Failed to load booking');
         router.push('/');
@@ -36,8 +36,8 @@ export default function BookingDetailPage() {
     try {
       await patch(`/bookings/${booking.id}/status`, { status: 'cancelled' });
       toast.success('Booking cancelled');
-      const updated = await get<Booking>(`/bookings/${params.id}`);
-      setBooking(updated);
+      const updated = await get<ApiResponse<Booking>>(`/bookings/${params.id}`);
+      setBooking(updated.data);
     } catch (err) {
       toast.error(getApiError(err));
     }
@@ -55,7 +55,7 @@ export default function BookingDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {booking.status === 'confirmed' || booking.status === 'completed' ? (
+      {booking?.status === 'confirmed' || booking?.status === 'completed' ? (
         <BookingConfirmation booking={booking} />
       ) : (
         <>

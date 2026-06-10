@@ -7,7 +7,7 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
-import type { ApiKey } from '@/types';
+import type { ApiKey, ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
 import { Key, Copy, Plus, Trash2, Eye, EyeOff, BookOpen, ArrowRight, Code, Globe, Shield, Server, ChevronDown, Check } from 'lucide-react';
 
@@ -82,8 +82,8 @@ export default function ApiIntegrationPage() {
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await get<ApiKey[]>('/api-keys');
-      setKeys(data);
+      const data = await get<ApiResponse<ApiKey[]>>('/api-keys');
+      setKeys(data.data);
     } catch {
       toast.error('Failed to load API keys');
     } finally {
@@ -97,8 +97,8 @@ export default function ApiIntegrationPage() {
     if (!keyName.trim()) return;
     setCreating(true);
     try {
-      const data = await post<ApiKey>('/api-keys', { name: keyName });
-      setNewKey(data.plainKey || '');
+      const data = await post<ApiResponse<ApiKey>>('/api-keys', { name: keyName });
+      setNewKey(data.data.plainKey || '');
       setKeyName('');
       fetchKeys();
     } catch (err) {

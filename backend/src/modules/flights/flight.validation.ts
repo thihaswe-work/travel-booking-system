@@ -37,6 +37,8 @@ export const listFlightsQuerySchema = z.object({
   departure_city: z.string().optional(),
   arrival_city: z.string().optional(),
   date: z.string().optional(),
+  departure_time: z.enum(['morning', 'afternoon', 'evening', 'night']).optional(),
+  arrival_time: z.enum(['morning', 'afternoon', 'evening', 'night']).optional(),
   seat_class: seatClassEnum.optional(),
   min_price: z.string().optional(),
   max_price: z.string().optional(),

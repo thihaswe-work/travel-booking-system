@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { get, post, getApiError } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 import TourBookingForm from '@/components/booking/TourBookingForm';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -22,6 +23,8 @@ export default function TourDetailPage() {
   const [booking, setBooking] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingParticipants, setPendingParticipants] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash_on_arrival');
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchTour = async () => {
@@ -37,8 +40,24 @@ export default function TourDetailPage() {
     fetchTour();
   }, [params.id]);
 
+  useEffect(() => {
+    if (!tour) return;
+    const saved = sessionStorage.getItem(`pendingTourBooking_${tour.id}`);
+    if (saved) {
+      sessionStorage.removeItem(`pendingTourBooking_${tour.id}`);
+      setPendingParticipants(JSON.parse(saved).participants);
+      setConfirmOpen(true);
+    }
+  }, [tour]);
+
   const handleBooking = async (participants: number) => {
+    if (!isAuthenticated) {
+      sessionStorage.setItem(`pendingTourBooking_${tour?.id}`, JSON.stringify({ participants, paymentMethod }));
+      router.push(`/login?redirect=/tours/${tour?.id}`);
+      return;
+    }
     setPendingParticipants(participants);
+    setPaymentMethod('cash_on_arrival');
     setConfirmOpen(true);
   };
 
@@ -54,10 +73,14 @@ export default function TourDetailPage() {
           itemId: tour.id,
           quantity: pendingParticipants,
         }],
-        paymentMethod: 'cash_on_arrival',
+        paymentMethod,
       });
       toast.success('Booking created!');
-      router.push(`/booking/checkout/${res.data.id}`);
+      if (paymentMethod === 'card') {
+        router.push(`/booking/checkout/${res.data.id}`);
+      } else {
+        router.push(`/booking/${res.data.id}`);
+      }
     } catch (err) {
       toast.error(getApiError(err));
     } finally {
@@ -207,7 +230,27 @@ export default function TourDetailPage() {
         confirmLabel="Confirm Booking"
         loading={booking}
         variant="primary"
-      />
+      >
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+          <div className="space-y-2">
+            <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === 'cash_on_arrival' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}>
+              <input type="radio" name="method" value="cash_on_arrival" checked={paymentMethod === 'cash_on_arrival'} onChange={() => setPaymentMethod('cash_on_arrival')} className="text-primary-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Cash on Arrival</p>
+                <p className="text-xs text-gray-500">Pay when you arrive</p>
+              </div>
+            </label>
+            <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${paymentMethod === 'card' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}>
+              <input type="radio" name="method" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="text-primary-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Card Payment</p>
+                <p className="text-xs text-gray-500">Pay online now</p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

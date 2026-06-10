@@ -81,13 +81,19 @@ Two-tab layout:
      │ /tours/[id]  │         │               │
      └──────┬───────┘         └──────┬────────┘
             │                        │
-            │   Click "Book Now"     │
-            ▼                        ▼
-     ┌───────────────────────────────────┐
-     │          Login Page                │
-     │       /login (redirect)            │
-     │  (must be authenticated to book)   │
-     └───────────────────────────────────┘
+             │   Click "Book Now"     │
+             ▼                        ▼
+      ┌───────────────────────────────────┐
+      │ ConfirmDialog appears:            │
+      │  - Payment Method: Card / Cash    │
+      │  - Quantity, Guest Info           │
+      │                                   │
+      │  If not logged in:                │
+      │  → Form saved to sessionStorage   │
+      │  → Redirect to /login?redirect=...│
+      │  → After login, data restored     │
+      │    and dialog reopens             │
+      └───────────────────────────────────┘
 ```
 
 ---
@@ -100,32 +106,45 @@ Two-tab layout:
                     └───────────┬───────────┘
                                 │
                     Click "Book Now" on any item
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │  Booking Checkout     │
-                    │ /booking/checkout/[id]│
-                    │                      │
-                    │  - Select quantity    │
-                    │  - Enter guest info   │
-                    │  - Choose payment:    │
-                    │    • Card (mock)      │
-                    │    • Cash on arrival  │
-                    └───────────┬───────────┘
-                                │
-                          Submit Booking
-                                │
-                                ▼
-                    ┌──────────────────────┐
-                    │  Booking Confirmation │
-                    │ /booking/[id]         │
-                    │                      │
-                    │  - Reference ID       │
-                    │  - Status: pending /  │
-                    │    confirmed          │
-                    │  - Invoice download   │
-                    │  - Cancel option      │
-                    └──────────────────────┘
+                     │
+                     ▼
+                     ┌──────────────────────────────────┐
+                     │  Detail Page → ConfirmDialog      │
+                     │  (no checkout page for cash)     │
+                     │                                  │
+                     │  Payment method chosen inside    │
+                     │  ConfirmDialog on detail page:   │
+                     │    • Card (mock)                 │
+                     │    • Cash on arrival             │
+                     │                                  │
+                     │  Card → /booking/checkout/[id]   │
+                     │  Cash → /booking/[id] (confirmed)│
+                     └───────────┬──────────────────────┘
+                                 │
+                           Submit Booking
+                                 │
+                     ┌───────────┴───────────┐
+                     ▼                       ▼
+            ┌──────────────────┐  ┌──────────────────┐
+            │  Card (pending)  │  │ Cash (confirmed) │
+            │ /booking/        │  │ /booking/[id]    │
+            │ checkout/[id]    │  │                  │
+            │                  │  │ - Reference ID   │
+            │ - Process payment│  │ - Status: conf.  │
+            │ - Confirm status │  │ - Invoice        │
+            │ - Mark paid      │  │ - Cancel option  │
+            └────────┬─────────┘  └──────────────────┘
+                     │
+                     ▼
+            ┌──────────────────┐
+            │  Booking Detail  │
+            │ /booking/[id]    │
+            │                  │
+            │ - Reference ID   │
+            │ - Status: conf.  │
+            │ - Invoice        │
+            │ - Cancel option  │
+            └──────────────────┘
 
    ┌──────────────────┬──────────────────────┬─────────────────┐
    │                  │                      │                 │
@@ -229,12 +248,16 @@ Two-tab layout:
 ## 5. Payment Flow
 
 ```
-                    ┌────────────────────────┐
-                    │    Checkout Page       │
-                    │ /booking/checkout/[id] │
-                    └───────────┬────────────┘
-                                │
-                    Choose payment method
+                    ┌─────────────────────────────┐
+                    │    Detail Page               │
+                    │ /flights/[id] /hotels/[id]   │
+                    │ /tours/[id]                  │
+                    │                              │
+                    │  "Book Now" → ConfirmDialog  │
+                    │  with payment method radio:  │
+                    │    ○ Card                    │
+                    │    ○ Cash on Arrival         │
+                    └───────────┬─────────────────┘
                                 │
           ┌─────────────────────┼─────────────────────┐
           ▼                     ▼                     ▼
@@ -242,9 +265,9 @@ Two-tab layout:
 │   Card Payment   │  │ Cash on Arrival  │  │ (Future: other)  │
 │   (mock)         │  │                  │  │                  │
 │                  │  │ - No upfront     │  │                  │
-│ - Enter card     │  │   payment        │  │                  │
-│   details        │  │ - Immediate      │  │                  │
-│ - Processing...  │  │   confirmation   │  │                  │
+│ - Redirected to  │  │   payment        │  │                  │
+│   checkout page  │  │ - Immediate      │  │                  │
+│ - Process payment│  │   confirmation   │  │                  │
 │ - May succeed or │  │ - Pay at hotel/  │  │                  │
 │   fail (mock)    │  │   tour start     │  │                  │
 └────────┬─────────┘  └────────┬─────────┘  └──────────────────┘
@@ -255,8 +278,8 @@ Two-tab layout:
 │  Card SUCCESS    │  │  Cash on Arrival │
 │  → Booking:      │  │  → Booking:      │
 │     pending      │  │     confirmed    │
-│  (waiting for    │  │                  │
-│   processing)    │  │                  │
+│  (redirect to    │  │  (redirect to    │
+│   checkout page) │  │   booking page)  │
 └──────────────────┘  └──────────────────┘
          │                     │
          └──────────┬──────────┘
@@ -290,12 +313,17 @@ Authentication flow:
     │                        │── verify password ──►│
     │                        │◄── user data ────────│
     │◄── { accessToken,     │                      │
-    │      user }            │                      │
+    │      user,             │                      │
+    │      csrfToken }       │                      │
     │◄── httpOnly cookie     │                      │
     │    (refreshToken)      │                      │
+    │◄── csrf_token cookie   │                      │
+    │    (SameSite=Strict)   │                      │
     │                        │                      │
     │── GET /users/me ──────►│                      │
     │   (Authorization: Bearer <token>)             │
+    │   (X-CSRF-Token on     │                      │
+    │    mutating requests)  │                      │
     │                        │── verify JWT ────────│
     │◄── user profile ──────│                      │
 
@@ -304,10 +332,11 @@ Booking flow (transactional):
     │                     │                          │
     │── POST /bookings ──►│                          │
     │                     │── BEGIN TRANSACTION ────►│
-    │                     │── check inventory ──────►│
-    │                     │── decrement seats ──────►│
+    │                     │── atomic decrement ─────►│
+    │                     │   (updateMany gte guard) │
     │                     │── create booking ───────►│
     │                     │── create payment ───────►│
+    │                     │── create audit log ─────►│
     │                     │── COMMIT ───────────────►│
     │◄── booking ────────│                          │
 

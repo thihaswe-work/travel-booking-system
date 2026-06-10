@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { AppError } from '../../utils/AppError';
 import { generateReferenceId, generateInvoiceNumber } from '../../utils/reference';
 import { getPagination, getPaginationMeta } from '../../utils/pagination';
+import { createAuditLog } from '../../utils/auditLogger';
 
 interface CreateItemInput {
   itemType: 'flight' | 'hotel' | 'tour';
@@ -92,6 +93,43 @@ export const bookingService = {
     }
 
     const bookingId = await prisma.$transaction(async (tx) => {
+      for (const d of detailInputs) {
+        if (d.item.itemType === 'flight') {
+          const seatClass = d.item.passengers?.[0]?.seatClass || 'economy';
+          const { count } = await tx.flightSeat.updateMany({
+            where: { flightId: d.item.itemId, seatClass: seatClass as any, availableSeats: { gte: d.item.quantity } },
+            data: { availableSeats: { decrement: d.item.quantity } },
+          });
+          if (count === 0) {
+            const flightSeat = await tx.flightSeat.findUnique({
+              where: { flightId_seatClass: { flightId: d.item.itemId, seatClass: seatClass as any } },
+            });
+            if (!flightSeat) throw new AppError('Seat class not available', 400, 'SEAT_CLASS_NOT_FOUND');
+            throw new AppError('Insufficient available seats', 400, 'INSUFFICIENT_SEATS');
+          }
+        } else if (d.item.itemType === 'hotel') {
+          const { count } = await tx.hotelRoom.updateMany({
+            where: { id: d.item.itemId, availableRooms: { gte: d.item.quantity } },
+            data: { availableRooms: { decrement: d.item.quantity } },
+          });
+          if (count === 0) {
+            const room = await tx.hotelRoom.findUnique({ where: { id: d.item.itemId } });
+            if (!room) throw new AppError('Hotel room not found', 404, 'ITEM_NOT_FOUND');
+            throw new AppError('Insufficient available rooms', 400, 'INSUFFICIENT_ROOMS');
+          }
+        } else if (d.item.itemType === 'tour') {
+          const { count } = await tx.tour.updateMany({
+            where: { id: d.item.itemId, availableSlots: { gte: d.item.quantity } },
+            data: { availableSlots: { decrement: d.item.quantity } },
+          });
+          if (count === 0) {
+            const tour = await tx.tour.findUnique({ where: { id: d.item.itemId } });
+            if (!tour) throw new AppError('Tour not found', 404, 'ITEM_NOT_FOUND');
+            throw new AppError('Insufficient available slots', 400, 'INSUFFICIENT_SLOTS');
+          }
+        }
+      }
+
       const booking = await tx.booking.create({
         data: {
           userId,
@@ -127,31 +165,6 @@ export const bookingService = {
         },
       });
 
-      for (const d of detailInputs) {
-        if (d.item.itemType === 'flight') {
-          const seatClass = d.item.passengers?.[0]?.seatClass || 'economy';
-          const flightSeat = await tx.flightSeat.findUnique({
-            where: { flightId_seatClass: { flightId: d.item.itemId, seatClass: seatClass as any } },
-          });
-          if (flightSeat) {
-            await tx.flightSeat.update({
-              where: { id: flightSeat.id },
-              data: { availableSeats: { decrement: d.item.quantity } },
-            });
-          }
-        } else if (d.item.itemType === 'hotel') {
-          await tx.hotelRoom.update({
-            where: { id: d.item.itemId },
-            data: { availableRooms: { decrement: d.item.quantity } },
-          });
-        } else if (d.item.itemType === 'tour') {
-          await tx.tour.update({
-            where: { id: d.item.itemId },
-            data: { availableSlots: { decrement: d.item.quantity } },
-          });
-        }
-      }
-
       await tx.payment.create({
         data: {
           bookingId: booking.id,
@@ -171,7 +184,7 @@ export const bookingService = {
       return booking.id;
     });
 
-    return prisma.booking.findUnique({
+    const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
         details: { include: { passengers: true } },
@@ -179,6 +192,16 @@ export const bookingService = {
         user: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
+
+    createAuditLog({
+      userId,
+      action: 'create',
+      entity: 'booking',
+      entityId: bookingId,
+      newValue: { bookingType: data.bookingType, totalAmount, status: data.paymentMethod === 'cash_on_arrival' ? 'confirmed' : 'pending' },
+    });
+
+    return booking;
   },
 
   async getById(bookingId: string, userId: string, userRole: string) {
@@ -275,6 +298,15 @@ export const bookingService = {
         }
       }
 
+      createAuditLog({
+        userId,
+        action: 'status_change',
+        entity: 'booking',
+        entityId: bookingId,
+        oldValue: { status: booking.status },
+        newValue: { status },
+      });
+
       return updated;
     });
   },
@@ -302,15 +334,10 @@ export const bookingService = {
       for (const detail of booking.details) {
         if (detail.itemType === 'flight') {
           const seatClass = detail.passengers?.[0]?.seatClass || 'economy';
-          const flightSeat = await tx.flightSeat.findUnique({
+          await tx.flightSeat.update({
             where: { flightId_seatClass: { flightId: detail.itemId, seatClass: seatClass as any } },
+            data: { availableSeats: { increment: detail.quantity } },
           });
-          if (flightSeat) {
-            await tx.flightSeat.update({
-              where: { id: flightSeat.id },
-              data: { availableSeats: { increment: detail.quantity } },
-            });
-          }
         } else if (detail.itemType === 'hotel') {
           await tx.hotelRoom.update({
             where: { id: detail.itemId },
@@ -331,6 +358,15 @@ export const bookingService = {
           data: { paymentStatus: 'refunded' },
         });
       }
+
+      createAuditLog({
+        userId,
+        action: 'cancel',
+        entity: 'booking',
+        entityId: bookingId,
+        oldValue: { status: booking.status },
+        newValue: { status: 'cancelled', reason },
+      });
 
       return tx.booking.findUnique({
         where: { id: bookingId },

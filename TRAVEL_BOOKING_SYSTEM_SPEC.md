@@ -99,6 +99,8 @@ destinations ──< flights
              ──< tours
 
 analytics_daily (denormalized aggregation table)
+
+audit_logs (references users)
 ```
 
 ### Table Definitions ✅
@@ -316,6 +318,21 @@ analytics_daily (denormalized aggregation table)
 
 **Indexes:** `user_id`, `is_read`, `created_at`
 
+#### `audit_logs` ✅
+| Column     | Type         | Constraints                    |
+|------------|--------------|--------------------------------|
+| id         | UUID         | PK                             |
+| user_id    | UUID         | FK → users.id                  |
+| action     | ENUM         | CREATE, UPDATE, DELETE, LOGIN, LOGOUT, REGISTER, CANCEL, PAYMENT, STATUS_CHANGE, APPROVE, DEACTIVATE, BAN |
+| entity     | VARCHAR(50)  | NOT NULL                       |
+| entity_id  | VARCHAR(50)  |                                |
+| old_values | JSONB        |                                |
+| new_values | JSONB        |                                |
+| ip         | VARCHAR(45)  |                                |
+| created_at | TIMESTAMPTZ  | DEFAULT NOW()                  |
+
+**Indexes:** `user_id`, `entity`, `entity_id`, `created_at`
+
 #### `analytics_daily` ✅
 | Column               | Type          | Constraints                   |
 |----------------------|---------------|-------------------------------|
@@ -365,12 +382,15 @@ Base URL: `/api/v1`
 
 ### Authentication ✅
 
-| Method | Endpoint               | Description              | Auth     | Status |
-|--------|------------------------|--------------------------|----------|--------|
-| POST   | /auth/register         | Register new user        | No       | ✅ |
-| POST   | /auth/login            | Login                    | No       | ✅ |
-| POST   | /auth/logout           | Logout                   | Yes      | ✅ |
-| POST   | /auth/refresh          | Refresh access token     | No*      | ✅ |
+| Method | Endpoint               | Description              | Auth       | Status |
+|--------|------------------------|--------------------------|------------|--------|
+| POST   | /auth/register         | Register new user        | No         | ✅ |
+| POST   | /auth/login            | Login                    | No         | ✅ |
+| POST   | /auth/logout           | Logout                   | Yes        | ✅ |
+| POST   | /auth/refresh          | Refresh access token     | CSRF token | ✅ |
+
+> **CSRF:** Login/Register/Refresh return `csrfToken` field and set `csrf_token` cookie (SameSite=Strict, readable by JS).
+> Refresh also requires `X-CSRF-Token` header matching the cookie value.
 
 **POST /auth/register**
 ```json
@@ -417,10 +437,13 @@ Base URL: `/api/v1`
   "success": true,
   "data": {
     "user": { "id": "uuid", "email": "jane@example.com", "role": "customer", "firstName": "Jane", "lastName": "Doe" },
-    "accessToken": "eyJhbG..."
+    "accessToken": "eyJhbG...",
+    "csrfToken": "rand-secure-token"
   }
 }
 ```
+
+Also sets `csrf_token` cookie (SameSite=Strict, readable by JS) for subsequent CSRF-protected requests.
 
 ### Users ✅ (all implemented)
 
@@ -612,27 +635,34 @@ Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`. 
    → GET /api/v1/flights/:id
    → Returns full details with destination
 
-3. BOOK
-   User clicks "Book Now"
+3. CONFIRM & PAYMENT METHOD
+   User clicks "Book Now" → ConfirmDialog opens:
+   - Selects quantity, enters guest info
+   - Chooses payment method (radio: Card / Cash on Arrival)
    → POST /api/v1/bookings
    → Server:
       a. Validates flight exists, seats available
       b. BEGIN transaction
-      c. Creates booking (status='pending')
-      d. Creates booking details + passengers
-      e. Decrements availableSeats
-      f. Creates payment (status='pending')
-      g. COMMIT
+      c. Atomic inventory decrement: `updateMany` with `{ availableSeats: { gte: quantity } }`
+      d. Creates booking
+         - If card: status='pending'
+         - If cash_on_arrival: status='confirmed' (immediate)
+      e. Creates booking details + passengers
+      f. Creates payment record
+      g. Creates audit log entry
+      h. COMMIT (fails if inventory race condition detected)
    → Response: booking + payment reference
 
-4. PAYMENT
-   User proceeds to checkout
+4. PAYMENT (card only)
+   If card: User redirected to /booking/checkout/[id]
    → POST /api/v1/payments/:id/process
    → Server:
       a. Updates payment to 'paid'
       b. Updates booking to 'confirmed'
       c. Creates receipt notification
    → Response: confirmation
+
+   If cash_on_arrival: User redirected to /booking/[id] (already confirmed)
 
 5. CONFIRMATION
    → GET /api/v1/bookings/:id returns full booking
@@ -658,9 +688,10 @@ Max 5 MB. Allowed types: jpeg, png, gif, webp. Returns `{ url: "http://..." }`. 
       a. Verifies ownership/permission
       b. BEGIN transaction
       c. Sets booking status to 'cancelled'
-      d. Restores inventory (+seats/+rooms/+slots)
+      d. Restores inventory via atomic increment
       e. Refunds paid payments
-      f. COMMIT
+      f. Creates audit log entry
+      g. COMMIT
 ```
 
 ### 4.4 Admin: Add New Flight ✅
@@ -705,7 +736,8 @@ backend/
 │   │   ├── validate.ts             # Zod schema validation
 │   │   ├── rateLimiter.ts          # Rate limiting
 │   │   ├── errorHandler.ts         # Global error handler
-│   │   └── asyncHandler.ts         # Async route wrapper
+│   │   ├── asyncHandler.ts         # Async route wrapper
+│   │   └── csrf.ts                 # CSRF token generation & validation
 │   ├── modules/
 │   │   ├── auth/        (controller, service, routes, validation)
 │   │   ├── users/       (controller, service, routes, validation)
@@ -723,7 +755,8 @@ backend/
 │   │   ├── jwt.ts
 │   │   ├── password.ts
 │   │   ├── reference.ts            # TBK + INV generators
-│   │   └── pagination.ts
+│   │   ├── pagination.ts
+│   │   └── auditLogger.ts          # Audit log creator (silent on error)
 │   └── types/
 │       └── index.ts                # Shared interfaces
 ├── prisma/
@@ -764,6 +797,7 @@ frontend/
 │   │   ├── profile/page.tsx
 │   │   ├── profile/bookings/page.tsx
 │   │   ├── notifications/page.tsx
+│   │   ├── offline/page.tsx          # Offline/API unreachable page
 │   │   └── admin/
 │   │       ├── layout.tsx
 │   │       ├── page.tsx
@@ -784,11 +818,13 @@ frontend/
 │   │   │   ├── Badge.tsx
 │   │   │   ├── Pagination.tsx
 │   │   │   ├── Spinner.tsx
-│   │   │   └── AutocompleteInput.tsx
-│   │   ├── layout/ (Header, Footer)
+│   │   │   ├── AutocompleteInput.tsx
+│   │   │   ├── FileUpload.tsx
+│   │   │   └── ConfirmDialog.tsx
+│   │   ├── layout/ (Header, Footer, OfflineBanner, Sidebar)
 │   │   └── search/ (SearchView, SearchFilters, SearchResults)
 │   ├── lib/
-│   │   ├── api.ts                    # Axios + JWT interceptor
+│   │   ├── api.ts                    # Axios + JWT interceptor + CSRF
 │   │   ├── auth.tsx                  # Auth context/provider
 │   │   └── utils.ts                  # formatCurrency, etc.
 │   └── types/
@@ -815,9 +851,9 @@ frontend/
 - [x] API key hashing: sha256 (not bcrypt — fast lookup)
 - [x] API key prefix: `ta_` for easy identification
 - [x] Multer error handling: returns 400 instead of 500
-- [ ] 📝 CSRF: SameSite cookies (partial)
-- [ ] 📝 Inventory race conditions: row-level locking (transaction only, no explicit FOR UPDATE)
-- [ ] 📝 Audit logging: not implemented
+- [x] CSRF: Token-based (csrf_token cookie + X-CSRF-Token header), SameSite=Strict
+- [x] Inventory race conditions: Atomic `updateMany` with `{ availableSeats: { gte: quantity } }` compare-and-decrement
+- [x] Audit logging: 17th model (AuditLog), logs all booking create/cancel/status-change and auth events
 
 ### Performance Constraints ✅
 - Pagination: required on all list endpoints (default 20, max 100)
@@ -870,12 +906,14 @@ frontend/
 | **Phase 10: Flight Seats & Hotel Rooms** | FlightSeat model, SeatEditor, RoomEditor, pricePerNight | ✅ Complete |
 | **Phase 11: API Integration** | ApiKey model, public endpoints, API Integration page with live docs | ✅ Complete |
 | **Phase 12: UX Polish** | ConfirmDialog, status dropdown, multer error handling, logout confirm | ✅ Complete |
+| **Phase 13: Security Hardening** | CSRF protection, inventory race condition fix (atomic gte), audit logging | ✅ Complete |
+| **Phase 14: Frontend Polish** | Offline detection page, payment method selector, time-of-day filters | ✅ Complete |
 
 ---
 
 ## 8. Prisma Schema (Quick Reference) ✅
 
-See [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) for the authoritative schema. All **16 models** are implemented: User, Destination, Flight, FlightSeat, Hotel, HotelRoom, Tour, Booking, BookingDetail, BookingPassenger, Payment, Notification, AnalyticsDaily, ApiKey, Review, Favorite.
+See [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) for the authoritative schema. All **17 models** are implemented: User, Destination, Flight, FlightSeat, Hotel, HotelRoom, Tour, Booking, BookingDetail, BookingPassenger, Payment, Notification, AnalyticsDaily, ApiKey, Review, Favorite, AuditLog.
 
 ---
 

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { config } from '../../config';
 import * as authService from './auth.service';
+import { generateCsrfToken, setCsrfCookie, clearCsrfCookie } from '../../middleware/csrf';
 
 function setRefreshCookie(res: Response, refreshToken: string) {
   res.cookie('refreshToken', refreshToken, {
@@ -24,13 +25,17 @@ function clearRefreshCookie(res: Response) {
 export async function register(req: Request, res: Response): Promise<void> {
   const result = await authService.register(req.body);
   setRefreshCookie(res, result.refreshToken);
-  res.status(201).json({ success: true, data: { user: result.user, accessToken: result.accessToken } });
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+  res.status(201).json({ success: true, data: { user: result.user, accessToken: result.accessToken, csrfToken } });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
   const result = await authService.login(req.body);
   setRefreshCookie(res, result.refreshToken);
-  res.json({ success: true, data: { user: result.user, accessToken: result.accessToken } });
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+  res.json({ success: true, data: { user: result.user, accessToken: result.accessToken, csrfToken } });
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
@@ -38,6 +43,7 @@ export async function logout(req: Request, res: Response): Promise<void> {
     await authService.logout(req.user.id);
   }
   clearRefreshCookie(res);
+  clearCsrfCookie(res);
   res.json({ success: true, message: 'Logged out successfully' });
 }
 
@@ -49,5 +55,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
   }
   const result = await authService.refreshTokens(refreshToken);
   setRefreshCookie(res, result.refreshToken);
-  res.json({ success: true, data: { accessToken: result.accessToken } });
+  const csrfToken = generateCsrfToken();
+  setCsrfCookie(res, csrfToken);
+  res.json({ success: true, data: { accessToken: result.accessToken, csrfToken } });
 }

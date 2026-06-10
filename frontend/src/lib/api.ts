@@ -9,12 +9,24 @@ const api = axios.create({
   withCredentials: true,
 });
 
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? match[1] : null;
+}
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+      if (config.method && !['get', 'head', 'options'].includes(config.method)) {
+        const csrf = getCsrfToken();
+        if (csrf && config.headers) {
+          config.headers['X-CSRF-Token'] = csrf;
+        }
       }
     }
     return config;
@@ -34,10 +46,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        const csrf = getCsrfToken();
         const response = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true, headers: csrf ? { 'X-CSRF-Token': csrf } : {} }
         );
         const accessToken = response.data?.data?.accessToken;
         if (accessToken) {

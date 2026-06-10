@@ -90,6 +90,22 @@ enum NotificationChannel {
   @@map("notification_channel")
 }
 
+enum AuditAction {
+  create
+  update
+  delete
+  login
+  logout
+  approve
+  deactivate
+  cancel
+  process_payment
+  refund
+  status_change
+
+  @@map("audit_action")
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(255)
@@ -109,6 +125,7 @@ model User {
   bookings       Booking[]
   notifications  Notification[]
   apiKeys        ApiKey[]
+  auditLogs      AuditLog[]
   createdFlights Flight[] @relation("UserCreatedFlights")
   createdHotels  Hotel[]  @relation("UserCreatedHotels")
   createdTours   Tour[]   @relation("UserCreatedTours")
@@ -366,6 +383,27 @@ model ApiKey {
   @@index([userId])
   @@index([keyHash])
   @@map("api_keys")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  userId     String?     @map("user_id") @db.Uuid
+  action     AuditAction
+  entity     String      @db.VarChar(100)
+  entityId   String?     @map("entity_id") @db.VarChar(255)
+  oldValue   Json?       @map("old_value")
+  newValue   Json?       @map("new_value")
+  ipAddress  String?     @map("ip_address") @db.VarChar(45)
+  userAgent  String?     @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model AnalyticsDaily {

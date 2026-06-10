@@ -58,6 +58,8 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     } else if (err.code === 'P2003') {
       message = 'Foreign key constraint failed';
       code = 'FOREIGN_KEY_VIOLATION';
+    } else {
+      message = `Database error: ${err.code} - ${err.message.substring(0, 200)}`;
     }
 
     res.status(statusCode).json({

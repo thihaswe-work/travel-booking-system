@@ -3,6 +3,7 @@ import prisma from '../../config/database';
 import { AppError } from '../../utils/AppError';
 import { hashPassword, comparePassword } from '../../utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt';
+import { createAuditLog } from '../../utils/auditLogger';
 
 interface RegisterInput {
   email: string;
@@ -50,6 +51,14 @@ export async function register(data: RegisterInput) {
     data: { refreshToken },
   });
 
+  createAuditLog({
+    userId: user.id,
+    action: 'create',
+    entity: 'user',
+    entityId: user.id,
+    newValue: { email: data.email, role: data.role || 'customer' },
+  });
+
   return { user: excludeSensitive(user), accessToken, refreshToken };
 }
 
@@ -76,6 +85,13 @@ export async function login(data: LoginInput) {
     data: { refreshToken },
   });
 
+  createAuditLog({
+    userId: user.id,
+    action: 'login',
+    entity: 'user',
+    entityId: user.id,
+  });
+
   return { user: excludeSensitive(user), accessToken, refreshToken };
 }
 
@@ -83,6 +99,13 @@ export async function logout(userId: string) {
   await prisma.user.update({
     where: { id: userId },
     data: { refreshToken: null },
+  });
+
+  createAuditLog({
+    userId,
+    action: 'logout',
+    entity: 'user',
+    entityId: userId,
   });
 }
 

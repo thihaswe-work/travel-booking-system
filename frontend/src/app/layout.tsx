@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/lib/auth';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import OfflineBanner from '@/components/layout/OfflineBanner';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col bg-gray-50">
         <AuthProvider>
           <Header />
+          <OfflineBanner />
           <main className="flex-1">{children}</main>
           <Footer />
         </AuthProvider>

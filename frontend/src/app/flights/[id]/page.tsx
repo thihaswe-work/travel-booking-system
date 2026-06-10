@@ -47,6 +47,7 @@ export default function FlightDetailPage() {
       sessionStorage.removeItem(`pendingFlightBooking_${flight.id}`);
       const data = JSON.parse(saved);
       setPendingBooking(data);
+      if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
       setConfirmOpen(true);
     }
   }, [flight]);

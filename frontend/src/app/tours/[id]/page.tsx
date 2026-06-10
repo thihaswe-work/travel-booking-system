@@ -45,7 +45,9 @@ export default function TourDetailPage() {
     const saved = sessionStorage.getItem(`pendingTourBooking_${tour.id}`);
     if (saved) {
       sessionStorage.removeItem(`pendingTourBooking_${tour.id}`);
-      setPendingParticipants(JSON.parse(saved).participants);
+      const savedData = JSON.parse(saved);
+      setPendingParticipants(savedData.participants);
+      if (savedData.paymentMethod) setPaymentMethod(savedData.paymentMethod);
       setConfirmOpen(true);
     }
   }, [tour]);

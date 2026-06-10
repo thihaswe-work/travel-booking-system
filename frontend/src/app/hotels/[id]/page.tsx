@@ -44,7 +44,9 @@ export default function HotelDetailPage() {
     const saved = sessionStorage.getItem(`pendingHotelBooking_${hotel.id}`);
     if (saved) {
       sessionStorage.removeItem(`pendingHotelBooking_${hotel.id}`);
-      setPendingBooking(JSON.parse(saved));
+      const data = JSON.parse(saved);
+      setPendingBooking(data);
+      if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
       setConfirmOpen(true);
     }
   }, [hotel]);

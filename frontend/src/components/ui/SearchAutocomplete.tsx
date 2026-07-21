@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { get } from '@/lib/api';
-import type { SearchResult, SearchResultItem } from '@/types';
+import type { SearchResult, SearchResultItem, ApiResponse } from '@/types';
 import {
   Search,
   MapPin,
@@ -149,9 +149,9 @@ export default function SearchAutocomplete({
     setError(false);
 
     try {
-      const data = await get<SearchResult>('/search', { q }, controller.signal);
+      const response = await get<ApiResponse<SearchResult>>('/search', { q }, controller.signal);
       if (!controller.signal.aborted) {
-        setResults(data);
+        setResults(response.data);
         setLoading(false);
       }
     } catch {

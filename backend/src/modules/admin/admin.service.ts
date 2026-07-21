@@ -128,35 +128,36 @@ export const adminService = {
       take: limit,
     });
 
-    const destinations = await Promise.all(
-      popularItems.map(async (item) => {
-        let destinationName = 'Unknown';
-        try {
-          if (item.itemType === 'flight') {
-            const flight = await prisma.flight.findUnique({
-              where: { id: item.itemId },
-              include: { destination: true },
-            });
-            if (flight?.destination) destinationName = flight.destination.name;
-          } else if (item.itemType === 'hotel') {
-            const room = await prisma.hotelRoom.findUnique({
-              where: { id: item.itemId },
-              include: { hotel: { include: { destination: true } } },
-            });
-            if (room?.hotel?.destination) destinationName = room.hotel.destination.name;
-          } else if (item.itemType === 'tour') {
-            const tour = await prisma.tour.findUnique({
-              where: { id: item.itemId },
-              include: { destination: true },
-            });
-            if (tour?.destination) destinationName = tour.destination.name;
-          }
-        } catch {
-          destinationName = 'Unknown';
-        }
-        return { itemId: item.itemId, itemType: item.itemType, bookings: item._count.id, destinationName };
-      }),
-    );
+    const flightIds = popularItems.filter(i => i.itemType === 'flight').map(i => i.itemId);
+    const roomIds = popularItems.filter(i => i.itemType === 'hotel').map(i => i.itemId);
+    const tourIds = popularItems.filter(i => i.itemType === 'tour').map(i => i.itemId);
+
+    const [flights, rooms, tours] = await Promise.all([
+      flightIds.length > 0 ? prisma.flight.findMany({
+        where: { id: { in: flightIds } },
+        select: { id: true, destination: { select: { name: true } } },
+      }) : [],
+      roomIds.length > 0 ? prisma.hotelRoom.findMany({
+        where: { id: { in: roomIds } },
+        select: { id: true, hotel: { select: { destination: { select: { name: true } } } } },
+      }) : [],
+      tourIds.length > 0 ? prisma.tour.findMany({
+        where: { id: { in: tourIds } },
+        select: { id: true, destination: { select: { name: true } } },
+      }) : [],
+    ]);
+
+    const destMap = new Map<string, string>();
+    for (const f of flights) destMap.set(f.id, f.destination?.name || 'Unknown');
+    for (const r of rooms) destMap.set(r.id, r.hotel?.destination?.name || 'Unknown');
+    for (const t of tours) destMap.set(t.id, t.destination?.name || 'Unknown');
+
+    const destinations = popularItems.map(item => ({
+      itemId: item.itemId,
+      itemType: item.itemType,
+      bookings: item._count.id,
+      destinationName: destMap.get(item.itemId) || 'Unknown',
+    }));
 
     const grouped: Record<string, { destinationName: string; totalBookings: number }> = {};
     for (const d of destinations) {

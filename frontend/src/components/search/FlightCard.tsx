@@ -8,7 +8,6 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import type { Flight } from '@/types';
 import { Plane, Clock, Users } from 'lucide-react';
-
 interface FlightCardProps {
   flight: Flight;
 }

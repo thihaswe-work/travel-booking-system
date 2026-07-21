@@ -25,7 +25,7 @@ export const list = asyncHandler(async (req: AuthenticatedRequest, res: Response
 });
 
 export const updateStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const booking = await bookingService.updateStatus(req.params.id, req.body.status, req.user!.id);
+  const booking = await bookingService.updateStatus(req.params.id, req.body.status, req.user!.id, req.user!.role);
   res.status(200).json({ success: true, data: booking });
 });
 

@@ -3,16 +3,12 @@ import prisma from '../../config/database';
 import { AppError } from '../../utils/AppError';
 import { getPagination, getPaginationMeta } from '../../utils/pagination';
 import { hashPassword } from '../../utils/password';
+import { excludeSensitive } from '../../utils/user';
 
 interface ListUserFilters {
   role?: string;
   isActive?: boolean;
   search?: string;
-}
-
-function excludeSensitive(user: { passwordHash: string; refreshToken?: string | null; [key: string]: unknown }) {
-  const { passwordHash, refreshToken, ...rest } = user;
-  return rest;
 }
 
 export async function createByAdmin(data: {

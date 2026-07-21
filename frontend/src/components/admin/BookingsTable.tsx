@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatCurrency, formatDate, getStatusColor, getBookingTypeLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, getBookingTypeLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import type { Booking } from '@/types';

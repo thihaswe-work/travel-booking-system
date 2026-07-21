@@ -39,7 +39,7 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (!error.response && typeof window !== 'undefined') {
+    if (!error.response && !error.code && typeof window !== 'undefined') {
       if (!window.location.pathname.startsWith('/offline')) {
         window.location.href = '/offline?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
       }
@@ -79,8 +79,8 @@ api.interceptors.response.use(
   }
 );
 
-export async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
-  const response = await api.get<T>(url, { params });
+export async function get<T>(url: string, params?: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+  const response = await api.get<T>(url, { params, signal });
   return response.data;
 }
 

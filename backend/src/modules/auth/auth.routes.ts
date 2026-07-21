@@ -11,7 +11,7 @@ const router = Router();
 
 router.post('/register', authLimiter, validate({ body: registerSchema }), asyncHandler(authController.register));
 router.post('/login', authLimiter, validate({ body: loginSchema }), asyncHandler(authController.login));
-router.post('/logout', authenticate, asyncHandler(authController.logout));
+router.post('/logout', authenticate, csrfProtection, asyncHandler(authController.logout));
 router.post('/refresh', csrfProtection, validate({ body: refreshSchema }), asyncHandler(authController.refresh));
 
 export default router;

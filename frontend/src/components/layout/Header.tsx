@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import SearchAutocomplete from '@/components/ui/SearchAutocomplete';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -60,11 +61,17 @@ export default function Header() {
             })}
           </nav>
 
+          <div className="hidden md:block w-64 lg:w-80">
+            <SearchAutocomplete placeholder="Search everything..." />
+          </div>
+
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
                   className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center">
@@ -144,6 +151,8 @@ export default function Header() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
             className="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100"
           >
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

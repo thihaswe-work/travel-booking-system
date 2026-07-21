@@ -14,6 +14,6 @@ export const getPayment = asyncHandler(async (req: AuthenticatedRequest, res: Re
 });
 
 export const getInvoice = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const invoice = await paymentService.getInvoice(req.params.invoiceNumber);
+  const invoice = await paymentService.getInvoice(req.params.invoiceNumber, req.user!.id, req.user!.role);
   res.status(200).json({ success: true, data: invoice });
 });

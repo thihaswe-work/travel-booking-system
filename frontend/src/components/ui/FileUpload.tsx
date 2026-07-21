@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Upload, X, ImageIcon } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getApiError } from '@/lib/api';
 
@@ -64,10 +64,11 @@ export default function FileUpload({ value, onChange, accept = 'image/jpeg,image
   if (value) {
     return (
       <div className="relative inline-block">
-        <img src={value} alt="Uploaded" className="w-40 h-32 object-cover rounded-lg border" />
+        <img src={value} alt="Uploaded" className="w-40 h-32 object-cover rounded-lg border" loading="lazy" />
         <button
           type="button"
           onClick={() => onChange('')}
+          aria-label="Remove uploaded image"
           className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
         >
           <X className="w-3 h-3" />

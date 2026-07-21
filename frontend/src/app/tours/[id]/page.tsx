@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Tour, Booking, ApiResponse } from '@/types';
 import { Clock, Users, Check, MapPin, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function TourDetailPage() {
@@ -45,10 +46,14 @@ export default function TourDetailPage() {
     const saved = sessionStorage.getItem(`pendingTourBooking_${tour.id}`);
     if (saved) {
       sessionStorage.removeItem(`pendingTourBooking_${tour.id}`);
-      const savedData = JSON.parse(saved);
-      setPendingParticipants(savedData.participants);
-      if (savedData.paymentMethod) setPaymentMethod(savedData.paymentMethod);
-      setConfirmOpen(true);
+      try {
+        const savedData = JSON.parse(saved);
+        setPendingParticipants(savedData.participants);
+        if (savedData.paymentMethod) setPaymentMethod(savedData.paymentMethod);
+        setConfirmOpen(true);
+      } catch {
+        sessionStorage.removeItem(`pendingTourBooking_${tour.id}`);
+      }
     }
   }, [tour]);
 
@@ -121,7 +126,7 @@ export default function TourDetailPage() {
 
       <div className="h-64 md:h-80 rounded-xl overflow-hidden mb-8 relative bg-gradient-to-br from-secondary-400 to-primary-400 flex items-center justify-center">
         {tour.imageUrl ? (
-          <img src={tour.imageUrl} alt={tour.name} className="w-full h-full object-cover" />
+          <Image src={tour.imageUrl} alt={tour.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 1024px" />
         ) : (
           <span className="text-white text-6xl font-bold opacity-30">{tour.name.charAt(0)}</span>
         )}

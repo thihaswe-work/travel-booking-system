@@ -4,13 +4,24 @@ dotenv.config();
 
 import path from 'path';
 
+const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+if (isProd && !process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is required in production');
+  process.exit(1);
+}
+if (isProd && !process.env.JWT_REFRESH_SECRET) {
+  console.error('FATAL: JWT_REFRESH_SECRET environment variable is required in production');
+  process.exit(1);
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback-secret',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+    secret: process.env.JWT_SECRET || 'dev-jwt-secret-do-not-use-in-production',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-do-not-use-in-production',
     expiresIn: parseInt(process.env.JWT_EXPIRES_IN || '900', 10),
     refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_IN || '604800', 10),
   },

@@ -160,7 +160,7 @@ export default function AdminFlightsPage() {
     )},
     {
       key: 'actions' as const,
-      header: 'Status' as const,
+      header: 'Actions' as const,
       render: (f: Flight) => (
         <div onClick={(e) => e.stopPropagation()}>
           <select

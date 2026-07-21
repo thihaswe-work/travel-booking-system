@@ -7,11 +7,10 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import FlightBookingForm from '@/components/booking/FlightBookingForm';
 import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
 import Spinner from '@/components/ui/Spinner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import type { Flight, Booking, BookingPassenger, ApiResponse } from '@/types';
-import { Plane, Clock, Calendar, Users, ArrowLeft } from 'lucide-react';
+import { Plane, Clock, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -45,10 +44,14 @@ export default function FlightDetailPage() {
     const saved = sessionStorage.getItem(`pendingFlightBooking_${flight.id}`);
     if (saved) {
       sessionStorage.removeItem(`pendingFlightBooking_${flight.id}`);
-      const data = JSON.parse(saved);
-      setPendingBooking(data);
-      if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
-      setConfirmOpen(true);
+      try {
+        const data = JSON.parse(saved);
+        setPendingBooking(data);
+        if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
+        setConfirmOpen(true);
+      } catch {
+        sessionStorage.removeItem(`pendingFlightBooking_${flight.id}`);
+      }
     }
   }, [flight]);
 

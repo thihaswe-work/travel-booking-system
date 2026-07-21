@@ -16,7 +16,7 @@ const sizeStyles = {
 
 export default function Spinner({ size = 'md', label, className }: SpinnerProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2', className)}>
+    <div role="status" aria-label={label || 'Loading'} className={cn('flex flex-col items-center justify-center gap-2', className)}>
       <Loader2 className={cn('animate-spin text-primary-600', sizeStyles[size])} />
       {label && <p className="text-sm text-gray-500">{label}</p>}
     </div>

@@ -4,13 +4,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { get } from '@/lib/api';
-import { formatCurrency, formatDate, getStatusColor, getBookingTypeLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, getBookingTypeLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import Pagination from '@/components/ui/Pagination';
 import type { Booking, PaginatedApiResponse } from '@/types';
-import { BookOpen, Eye, Filter } from 'lucide-react';
+import { BookOpen, Eye } from 'lucide-react';
 
 const statusTabs = [
   { value: '', label: 'All' },

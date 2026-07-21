@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { config } from '../../config';
 import { authenticate } from '../../middleware/authenticate';
+import { authorize } from '../../middleware/authorize';
 import { asyncHandler } from '../../middleware/asyncHandler';
 
 const storage = multer.diskStorage({
@@ -54,6 +55,7 @@ const uploadMiddleware = (req: Request, res: Response, next: NextFunction) => {
 router.post(
   '/',
   authenticate,
+  authorize('admin', 'travel_agent'),
   uploadMiddleware,
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.file) {

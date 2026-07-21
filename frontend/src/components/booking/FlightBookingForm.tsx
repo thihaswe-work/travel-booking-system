@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
 import type { Flight, BookingPassenger } from '@/types';
 import { Plus, Minus, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface FlightBookingFormProps {
   flight: Flight;
@@ -43,10 +44,11 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
     return seat ? Number(seat.price) : 0;
   };
 
-  const totalPrice = useMemo(
-    () => getPriceForClass(seatClass) * passengerCount,
-    [seatClass, passengerCount]
-  );
+  const totalPrice = useMemo(() => {
+    const seat = seats.find((s) => s.seatClass === seatClass);
+    const price = seat ? Number(seat.price) : 0;
+    return price * passengerCount;
+  }, [seatClass, passengerCount, seats]);
 
   const updatePassenger = (index: number, field: keyof PassengerInput, value: string) => {
     const updated = [...passengers];
@@ -79,11 +81,11 @@ export default function FlightBookingForm({ flight, onComplete }: FlightBookingF
 
   const handleSubmit = () => {
     if (!validate()) {
-      alert('Please fill in all passenger details');
+      toast.error('Please fill in all passenger details');
       return;
     }
-    const bookingPassengers: BookingPassenger[] = passengers.map((p, i) => ({
-      id: `temp-${i}`,
+    const bookingPassengers: BookingPassenger[] = passengers.map((p) => ({
+      id: crypto.randomUUID(),
       firstName: p.firstName,
       lastName: p.lastName,
       documentType: p.documentType,

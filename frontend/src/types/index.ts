@@ -287,3 +287,22 @@ export interface ApiKey {
   createdAt: string;
   plainKey?: string;
 }
+
+export interface SearchResultItem {
+  id: string;
+  type: 'destination' | 'flight' | 'hotel' | 'tour' | 'airport';
+  title: string;
+  subtitle: string;
+  imageUrl?: string;
+  url: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SearchResult {
+  destinations: SearchResultItem[];
+  flights: SearchResultItem[];
+  hotels: SearchResultItem[];
+  tours: SearchResultItem[];
+  airports: SearchResultItem[];
+  totalResults: number;
+}

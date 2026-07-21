@@ -4,6 +4,7 @@ import { AppError } from '../../utils/AppError';
 import { hashPassword, comparePassword } from '../../utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 import { createAuditLog } from '../../utils/auditLogger';
+import { excludeSensitive } from '../../utils/user';
 
 interface RegisterInput {
   email: string;
@@ -17,11 +18,6 @@ interface RegisterInput {
 interface LoginInput {
   email: string;
   password: string;
-}
-
-function excludeSensitive(user: { passwordHash: string; refreshToken?: string | null; [key: string]: unknown }) {
-  const { passwordHash, refreshToken, ...rest } = user;
-  return rest;
 }
 
 export async function register(data: RegisterInput) {
@@ -68,13 +64,13 @@ export async function login(data: LoginInput) {
     throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
+  if (!user.isActive) {
+    throw new AppError('Account has been deactivated. Contact support.', 401, 'ACCOUNT_INACTIVE');
+  }
+
   const isPasswordValid = await comparePassword(data.password, user.passwordHash);
   if (!isPasswordValid) {
     throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
-  }
-
-  if (!user.isActive) {
-    throw new AppError('Account has been deactivated. Contact support.', 401, 'ACCOUNT_INACTIVE');
   }
 
   const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role, trustLevel: user.trustLevel, approvedItemsCount: user.approvedItemsCount });

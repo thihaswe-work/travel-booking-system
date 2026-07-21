@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import type { Hotel, HotelRoom } from '@/types';
 import { Users, Bed } from 'lucide-react';
 
@@ -90,7 +90,9 @@ export default function HotelBookingForm({ hotel, rooms, onComplete }: HotelBook
                     />
                     <span className="font-medium text-gray-900">{room.roomType}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1 ml-5">{room.roomType}</p>
+                  <p className="text-sm text-gray-500 mt-1 ml-5">
+                    {room.maxGuests} guest{room.maxGuests !== 1 ? 's' : ''} max
+                  </p>
                   <div className="flex items-center gap-4 mt-2 ml-5 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" /> Max {room.maxGuests} guests

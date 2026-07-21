@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import type { Hotel } from '@/types';
@@ -20,10 +21,12 @@ export default function HotelCard({ hotel }: HotelCardProps) {
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden card-hover flex flex-col md:flex-row">
       <div className="md:w-72 h-48 md:h-auto relative overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-400 flex items-center justify-center">
         {hotel.imageUrl ? (
-          <img
+          <Image
             src={hotel.imageUrl}
             alt={hotel.name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 288px"
           />
         ) : (
           <span className="text-white text-lg font-bold opacity-50">{hotel.name.charAt(0)}</span>

@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
-import { get, patch, getApiError } from '@/lib/api';
+import { get, patch } from '@/lib/api';
 import Button from '@/components/ui/Button';
 import Spinner from '@/components/ui/Spinner';
 import type { Notification, ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
-import { Bell, CheckCheck, MailOpen, Mail, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { Bell, CheckCheck, MailOpen, Mail } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
 export default function NotificationsPage() {

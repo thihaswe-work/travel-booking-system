@@ -50,7 +50,7 @@ export default function AutocompleteInput({
       finally { setLoading(false); }
     }, 250);
     return () => clearTimeout(timer.current);
-  }, [value, endpoint, field]);
+  }, [value, endpoint, field, apiParam]);
 
   useEffect(() => {
     const handle = (e: MouseEvent) => {

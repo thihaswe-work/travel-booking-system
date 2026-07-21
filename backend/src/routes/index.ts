@@ -12,9 +12,11 @@ import adminRoutes from '../modules/admin/admin.routes';
 import uploadRoutes from '../modules/upload/upload.routes';
 import apiKeyRoutes from '../modules/api-keys/api-key.routes';
 import publicRoutes from '../modules/api-keys/public.routes';
+import searchRoutes from '../modules/search/search.routes';
 
 const router = Router();
 
+router.use('/search', searchRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/destinations', destinationRoutes);

@@ -57,7 +57,7 @@ export default function SeatEditor({ seats, onChange }: SeatEditorProps) {
         </Button>
       </div>
       {seats.length === 0 && (
-        <p className="text-sm text-gray-400 italic">No seat classes added yet. Click "Add Seat Class" to add one.</p>
+        <p className="text-sm text-gray-400 italic">No seat classes added yet. Click &quot;Add Seat Class&quot; to add one.</p>
       )}
       {seats.map((seat, i) => (
         <div key={i} className="p-3 border border-gray-200 rounded-lg space-y-3 relative">

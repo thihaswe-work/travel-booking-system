@@ -94,7 +94,20 @@ export default function AdminDestinationsPage() {
     { key: 'isActive', header: 'Status', render: (d) => (
       <Badge variant={d.isActive ? 'success' : 'danger'} size="sm">{d.isActive ? 'Active' : 'Inactive'}</Badge>
     )},
-
+    {
+      key: 'actions' as const,
+      header: 'Actions' as const,
+      render: (d: Destination) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => handleToggleActive(d)}
+            className="text-sm text-primary-600 hover:text-primary-700"
+          >
+            {d.isActive ? 'Deactivate' : 'Activate'}
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (

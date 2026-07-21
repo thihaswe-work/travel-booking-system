@@ -48,6 +48,7 @@ export function getBookingTypeLabel(type?: string): string {
     flight: 'Flight',
     hotel: 'Hotel',
     tour: 'Tour',
+    package: 'Package',
   };
   return typeMap[type.toLowerCase()] || type;
 }

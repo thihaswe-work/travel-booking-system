@@ -28,7 +28,7 @@ function PendingCard({ count, label, href, color }: { count: number; label: stri
 }
 
 export default function AdminDashboard() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin } = useAuth();
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [revenueData, setRevenueData] = useState<{ date: string; amount: number }[]>([]);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);

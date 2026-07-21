@@ -5,7 +5,6 @@ import FlightCard from './FlightCard';
 import HotelCard from './HotelCard';
 import TourCard from './TourCard';
 import Pagination from '@/components/ui/Pagination';
-import Spinner from '@/components/ui/Spinner';
 import type { Flight, Hotel, Tour, PaginatedApiResponse } from '@/types';
 import { SearchX } from 'lucide-react';
 

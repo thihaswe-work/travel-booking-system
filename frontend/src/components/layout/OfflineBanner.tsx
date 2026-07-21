@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { WifiOff, X, RefreshCw, ExternalLink } from 'lucide-react';
+import { WifiOff, X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
@@ -11,10 +11,8 @@ export default function OfflineBanner() {
   const pathname = usePathname();
   const [isOffline, setIsOffline] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [checking, setChecking] = useState(false);
 
   const checkConnection = useCallback(async () => {
-    setChecking(true);
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -23,8 +21,6 @@ export default function OfflineBanner() {
       setIsOffline(false);
     } catch {
       setIsOffline(true);
-    } finally {
-      setChecking(false);
     }
   }, []);
 

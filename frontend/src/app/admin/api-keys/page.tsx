@@ -21,7 +21,16 @@ const tabs = [
 function CodeBlock({ code, lang = 'bash' }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
-    navigator.clipboard.writeText(code);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = code;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success('Copied to clipboard');
@@ -425,11 +434,11 @@ curl -H "X-API-Key: ta_your_key_here" \\
                     </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                      <span><strong>Use descriptive names</strong> — Name your keys by environment (e.g., "Production", "Staging") so you can identify them easily.</span>
+                      <span><strong>Use descriptive names</strong> — Name your keys by environment (e.g., &quot;Production&quot;, &quot;Staging&quot;) so you can identify them easily.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                      <span><strong>Monitor usage</strong> — Check the "Last Used" column to identify unused keys and revoke them.</span>
+                      <span><strong>Monitor usage</strong> — Check the &quot;Last Used&quot; column to identify unused keys and revoke them.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <ArrowRight className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />

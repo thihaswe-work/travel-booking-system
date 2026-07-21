@@ -149,7 +149,7 @@ export default function AdminToursPage() {
     )},
     {
       key: 'actions' as const,
-      header: 'Status' as const,
+      header: 'Actions' as const,
       render: (t: Tour) => (
         <div onClick={(e) => e.stopPropagation()}>
           <select

@@ -5,7 +5,6 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import FileUpload from '@/components/ui/FileUpload';
-import { cn } from '@/lib/utils';
 
 export interface FieldDefinition {
   name: string;
@@ -170,10 +169,7 @@ export default function ManageForm({
             required={field.required}
             value={value}
             onChange={(e) =>
-              handleChange(
-                field.name,
-                field.type === 'number' ? e.target.value : e.target.value
-              )
+              handleChange(field.name, e.target.value)
             }
             error={error}
             min={field.min}

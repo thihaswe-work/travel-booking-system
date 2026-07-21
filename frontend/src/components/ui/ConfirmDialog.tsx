@@ -34,7 +34,7 @@ export default function ConfirmDialog({
       <p className="text-gray-600 mb-4">{message}</p>
       {children}
       <div className="flex gap-3 mt-4">
-        <Button variant={variant} onClick={onConfirm} loading={loading}>
+        <Button variant={variant} onClick={onConfirm} loading={loading} disabled={loading}>
           {confirmLabel}
         </Button>
         <Button variant="outline" onClick={onClose} disabled={loading}>

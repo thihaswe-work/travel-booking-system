@@ -26,7 +26,10 @@ export async function list(
   }
 
   if (filters.search) {
-    where.name = { contains: filters.search, mode: 'insensitive' };
+    where.OR = [
+      { name: { contains: filters.search, mode: 'insensitive' } },
+      { country: { contains: filters.search, mode: 'insensitive' } },
+    ];
   }
 
   const sortField = query.sort_by || 'createdAt';

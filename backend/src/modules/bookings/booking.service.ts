@@ -67,7 +67,7 @@ export const bookingService = {
         if (!room) throw new AppError('Hotel room not found', 404, 'ITEM_NOT_FOUND');
         if (!room.isActive) throw new AppError('Room is not available', 400, 'ITEM_NOT_AVAILABLE');
         if (room.availableRooms < item.quantity) {
-          throw new AppError('Insufficient available rooms', 400, 'INSUFFICIENT_SEATS');
+          throw new AppError('Insufficient available rooms', 400, 'INSUFFICIENT_ROOMS');
         }
         if (!item.checkInDate || !item.checkOutDate) {
           throw new AppError('Check-in and check-out dates are required for hotel bookings', 400, 'VALIDATION_ERROR');
@@ -82,7 +82,7 @@ export const bookingService = {
         if (!tour) throw new AppError('Tour not found', 404, 'ITEM_NOT_FOUND');
         if (!tour.isActive) throw new AppError('Tour is not available', 400, 'ITEM_NOT_AVAILABLE');
         if (tour.availableSlots < item.quantity) {
-          throw new AppError('Insufficient available slots', 400, 'INSUFFICIENT_SEATS');
+          throw new AppError('Insufficient available slots', 400, 'INSUFFICIENT_SLOTS');
         }
         unitPrice = Number(tour.pricePerPerson);
       }
@@ -259,13 +259,16 @@ export const bookingService = {
     return { bookings, meta: getPaginationMeta(total, page, limit) };
   },
 
-  async updateStatus(bookingId: string, status: string, userId: string) {
+  async updateStatus(bookingId: string, status: string, userId: string, userRole: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: { payments: true },
     });
 
     if (!booking) throw new AppError('Booking not found', 404, 'NOT_FOUND');
+    if (userRole !== 'admin' && booking.userId !== userId) {
+      throw new AppError('Access denied', 403, 'FORBIDDEN');
+    }
 
     const allowedTransitions: Record<string, string[]> = {
       pending: ['confirmed', 'cancelled'],
@@ -333,11 +336,20 @@ export const bookingService = {
 
       for (const detail of booking.details) {
         if (detail.itemType === 'flight') {
-          const seatClass = detail.passengers?.[0]?.seatClass || 'economy';
-          await tx.flightSeat.update({
-            where: { flightId_seatClass: { flightId: detail.itemId, seatClass: seatClass as any } },
-            data: { availableSeats: { increment: detail.quantity } },
-          });
+          const passengerCounts: Record<string, number> = {};
+          for (const p of detail.passengers || []) {
+            const cls = p.seatClass || 'economy';
+            passengerCounts[cls] = (passengerCounts[cls] || 0) + 1;
+          }
+          if (Object.keys(passengerCounts).length === 0) {
+            passengerCounts['economy'] = detail.quantity;
+          }
+          for (const [seatClass, count] of Object.entries(passengerCounts)) {
+            await tx.flightSeat.updateMany({
+              where: { flightId: detail.itemId, seatClass: seatClass as any },
+              data: { availableSeats: { increment: count } },
+            });
+          }
         } else if (detail.itemType === 'hotel') {
           await tx.hotelRoom.update({
             where: { id: detail.itemId },

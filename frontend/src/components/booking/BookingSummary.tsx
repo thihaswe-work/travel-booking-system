@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatCurrency, formatDate, formatDateTime, getStatusColor, getBookingTypeLabel } from '@/lib/utils';
+import { formatCurrency, formatDate, getBookingTypeLabel } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import type { Booking } from '@/types';
@@ -137,8 +137,12 @@ export default function BookingSummary({ booking, onCancel }: BookingSummaryProp
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-1" /> Invoice
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+          >
+            <Download className="w-4 h-4 mr-1" /> Print Invoice
           </Button>
           {canCancel && onCancel && (
             <Button variant="danger" size="sm" onClick={onCancel}>

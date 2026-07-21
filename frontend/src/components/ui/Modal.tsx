@@ -53,6 +53,9 @@ export default function Modal({
         onClick={onClose}
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || 'Dialog'}
         className={cn(
           'relative w-full bg-white rounded-2xl shadow-xl transform transition-all',
           sizeStyles[size]
@@ -63,6 +66,7 @@ export default function Modal({
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
             >
               <X className="w-5 h-5" />

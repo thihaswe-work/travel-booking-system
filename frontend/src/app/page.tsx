@@ -1,19 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import Link from 'next/link';
-import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
+import SearchAutocomplete from '@/components/ui/SearchAutocomplete';
 import Button from '@/components/ui/Button';
-import AutocompleteInput from '@/components/ui/AutocompleteInput';
-import { Plane, Building2, Compass, Search, Shield, Clock, CreditCard, ArrowRight, Star } from 'lucide-react';
-
-const tabs = [
-  { id: 'flights', label: 'Flights', icon: Plane },
-  { id: 'hotels', label: 'Hotels', icon: Building2 },
-  { id: 'tours', label: 'Tours', icon: Compass },
-];
+import { Shield, Clock, CreditCard, ArrowRight } from 'lucide-react';
 
 const featuredDestinations = [
   { name: 'Tokyo', country: 'Japan', gradient: 'from-red-500 to-orange-500', tag: 'Cultural' },
@@ -44,33 +35,6 @@ const whyChooseUs = [
 ];
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('flights');
-  const router = useRouter();
-
-  const [flightSearch, setFlightSearch] = useState({ from: '', to: '', date: '' });
-  const [hotelSearch, setHotelSearch] = useState({ destination: '', checkIn: '', checkOut: '', guests: '1' });
-  const [tourSearch, setTourSearch] = useState({ destination: '', duration: '' });
-
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    params.set('type', activeTab);
-
-    if (activeTab === 'flights') {
-      if (flightSearch.from) params.set('departureCity', flightSearch.from);
-      if (flightSearch.to) params.set('arrivalCity', flightSearch.to);
-      if (flightSearch.date) params.set('departureDate', flightSearch.date);
-    } else if (activeTab === 'hotels') {
-      if (hotelSearch.destination) params.set('destination', hotelSearch.destination);
-      if (hotelSearch.checkIn) params.set('checkIn', hotelSearch.checkIn);
-      if (hotelSearch.checkOut) params.set('checkOut', hotelSearch.checkOut);
-      if (hotelSearch.guests) params.set('guests', hotelSearch.guests);
-    } else if (activeTab === 'tours') {
-      if (tourSearch.destination) params.set('tourDestination', tourSearch.destination);
-    }
-
-    router.push(`/search?${params.toString()}`);
-  };
-
   return (
     <div>
       <section className="hero-gradient relative overflow-hidden">
@@ -86,120 +50,12 @@ export default function HomePage() {
           </div>
 
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-2">
-              <div className="flex border-b border-gray-200 mb-4">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === tab.id
-                          ? 'text-primary-600 border-primary-600'
-                          : 'text-gray-500 border-transparent hover:text-gray-700'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-4">
-                {activeTab === 'flights' && (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <AutocompleteInput
-                      placeholder="From (city)"
-                      value={flightSearch.from}
-                      onChange={(v) => setFlightSearch({ ...flightSearch, from: v })}
-                      endpoint="/flights"
-                      field="departureCity"
-                      apiParam="departure_city"
-                    />
-                    <AutocompleteInput
-                      placeholder="To (city)"
-                      value={flightSearch.to}
-                      onChange={(v) => setFlightSearch({ ...flightSearch, to: v })}
-                      endpoint="/flights"
-                      field="arrivalCity"
-                      apiParam="arrival_city"
-                    />
-                    <Input
-                      type="date"
-                      value={flightSearch.date}
-                      onChange={(e) => setFlightSearch({ ...flightSearch, date: e.target.value })}
-                    />
-                    <Button variant="primary" onClick={handleSearch} className="flex-shrink-0">
-                      <Search className="w-4 h-4 mr-2" /> Search
-                    </Button>
-                  </div>
-                )}
-
-                {activeTab === 'hotels' && (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <AutocompleteInput
-                      placeholder="Destination"
-                      value={hotelSearch.destination}
-                      onChange={(v) => setHotelSearch({ ...hotelSearch, destination: v })}
-                      endpoint="/hotels"
-                      field="name"
-                      apiParam="search"
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Check-in"
-                      value={hotelSearch.checkIn}
-                      onChange={(e) => setHotelSearch({ ...hotelSearch, checkIn: e.target.value })}
-                    />
-                    <Input
-                      type="date"
-                      placeholder="Check-out"
-                      value={hotelSearch.checkOut}
-                      onChange={(e) => setHotelSearch({ ...hotelSearch, checkOut: e.target.value })}
-                    />
-                    <Input
-                      type="number"
-                      min={1}
-                      placeholder="Guests"
-                      className="w-24"
-                      value={hotelSearch.guests}
-                      onChange={(e) => setHotelSearch({ ...hotelSearch, guests: e.target.value })}
-                    />
-                    <Button variant="primary" onClick={handleSearch} className="flex-shrink-0">
-                      <Search className="w-4 h-4 mr-2" /> Search
-                    </Button>
-                  </div>
-                )}
-
-                {activeTab === 'tours' && (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <AutocompleteInput
-                      placeholder="Destination"
-                      value={tourSearch.destination}
-                      onChange={(v) => setTourSearch({ ...tourSearch, destination: v })}
-                      endpoint="/tours"
-                      field="name"
-                      apiParam="search"
-                    />
-                    <Select
-                      options={[
-                        { value: '1-3', label: '1-3 Days' },
-                        { value: '4-7', label: '4-7 Days' },
-                        { value: '8-14', label: '1-2 Weeks' },
-                        { value: '15+', label: '2+ Weeks' },
-                      ]}
-                      placeholder="Duration"
-                      value={tourSearch.duration}
-                      onChange={(e) => setTourSearch({ ...tourSearch, duration: e.target.value })}
-                    />
-                    <Button variant="primary" onClick={handleSearch} className="flex-shrink-0">
-                      <Search className="w-4 h-4 mr-2" /> Search
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <div className="bg-white rounded-2xl shadow-2xl p-4">
+              <SearchAutocomplete
+                variant="hero"
+                placeholder="Search destinations, flights, hotels, tours..."
+                autoFocus
+              />
             </div>
           </div>
         </div>

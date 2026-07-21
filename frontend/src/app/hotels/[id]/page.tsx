@@ -13,6 +13,7 @@ import type { Hotel, Booking, ApiResponse } from '@/types';
 import { MapPin, Star, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function HotelDetailPage() {
   const params = useParams();
@@ -44,10 +45,14 @@ export default function HotelDetailPage() {
     const saved = sessionStorage.getItem(`pendingHotelBooking_${hotel.id}`);
     if (saved) {
       sessionStorage.removeItem(`pendingHotelBooking_${hotel.id}`);
-      const data = JSON.parse(saved);
-      setPendingBooking(data);
-      if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
-      setConfirmOpen(true);
+      try {
+        const data = JSON.parse(saved);
+        setPendingBooking(data);
+        if (data.paymentMethod) setPaymentMethod(data.paymentMethod);
+        setConfirmOpen(true);
+      } catch {
+        sessionStorage.removeItem(`pendingHotelBooking_${hotel.id}`);
+      }
     }
   }, [hotel]);
 
@@ -120,9 +125,9 @@ export default function HotelDetailPage() {
         <ArrowLeft className="w-4 h-4" /> Back to search
       </Link>
 
-      <div className="h-64 md:h-80 rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-primary-400 to-secondary-400 flex items-center justify-center">
+      <div className="h-64 md:h-80 rounded-xl overflow-hidden mb-8 bg-gradient-to-br from-primary-400 to-secondary-400 flex items-center justify-center relative">
         {hotel.imageUrl ? (
-          <img src={hotel.imageUrl} alt={hotel.name} className="w-full h-full object-cover" />
+          <Image src={hotel.imageUrl} alt={hotel.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, 1024px" />
         ) : (
           <span className="text-white text-6xl font-bold opacity-30">{hotel.name.charAt(0)}</span>
         )}

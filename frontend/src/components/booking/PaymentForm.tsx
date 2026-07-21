@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { formatCurrency } from '@/lib/utils';
 import { CreditCard, Banknote, Lock } from 'lucide-react';

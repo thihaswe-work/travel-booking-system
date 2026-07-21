@@ -20,8 +20,8 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1);
-      let start = Math.max(2, page - 1);
-      let end = Math.min(totalPages - 1, page + 1);
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
       if (start > 2) pages.push('...');
       for (let i = start; i <= end; i++) pages.push(i);
       if (end < totalPages - 1) pages.push('...');
@@ -35,6 +35,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
+        aria-label="Previous page"
         className={cn(
           'p-2 rounded-lg text-sm font-medium transition-colors',
           'hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -51,6 +52,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
           <button
             key={p}
             onClick={() => onPageChange(p)}
+            aria-current={p === page ? 'page' : undefined}
             className={cn(
               'min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors',
               p === page
@@ -65,6 +67,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Paginatio
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
+        aria-label="Next page"
         className={cn(
           'p-2 rounded-lg text-sm font-medium transition-colors',
           'hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed'

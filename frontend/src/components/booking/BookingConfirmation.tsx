@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { formatCurrency, formatDateTime, getStatusColor } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import type { Booking, Payment } from '@/types';
+import type { Booking } from '@/types';
 import { CheckCircle, ArrowRight, Home } from 'lucide-react';
 
 interface BookingConfirmationProps {

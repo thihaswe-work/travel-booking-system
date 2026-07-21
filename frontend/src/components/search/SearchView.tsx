@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
-import Spinner from '@/components/ui/Spinner';
 import { get } from '@/lib/api';
 import type { SearchFilters as SearchFiltersType, PaginatedApiResponse, Flight, Hotel, Tour } from '@/types';
 import { Search } from 'lucide-react';
@@ -13,6 +12,30 @@ interface SearchViewProps {
   type: 'flight' | 'hotel' | 'tour';
 }
 
+const camelToSnake = (key: string): string => {
+  const map: Record<string, string> = {
+    departureCity: 'departure_city',
+    arrivalCity: 'arrival_city',
+    departureDate: 'date',
+    departureTime: 'departure_time',
+    arrivalTime: 'arrival_time',
+    seatClass: 'seat_class',
+    destination: 'search',
+    checkIn: 'check_in',
+    checkOut: 'check_out',
+    guests: 'guests',
+    starRating: 'min_rating',
+    tourDestination: 'search',
+    minDuration: 'min_duration',
+    maxDuration: 'max_duration',
+  };
+  if (map[key]) return map[key];
+  if (key === 'minPrice' || key === 'tourMinPrice') return 'min_price';
+  if (key === 'maxPrice' || key === 'tourMaxPrice' || key === 'maxPricePerNight') return 'max_price';
+  if (key === 'minPricePerNight') return 'min_price_per_night';
+  return key;
+};
+
 export default function SearchView({ type }: SearchViewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -20,32 +43,6 @@ export default function SearchView({ type }: SearchViewProps) {
   const [filters, setFilters] = useState<SearchFiltersType>({});
   const [results, setResults] = useState<PaginatedApiResponse<Flight> | PaginatedApiResponse<Hotel> | PaginatedApiResponse<Tour> | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const camelToSnake = (key: string): string => {
-    const map: Record<string, string> = {
-      departureCity: 'departure_city',
-      arrivalCity: 'arrival_city',
-      departureDate: 'date',
-      departureTime: 'departure_time',
-      arrivalTime: 'arrival_time',
-      seatClass: 'seat_class',
-      minPrice: 'min_price',
-      maxPrice: 'max_price',
-      destination: 'search',
-      checkIn: 'check_in',
-      checkOut: 'check_out',
-      guests: 'guests',
-      starRating: 'min_rating',
-      minPricePerNight: 'min_price_per_night',
-      maxPricePerNight: 'max_price',
-      tourDestination: 'search',
-      minDuration: 'min_duration',
-      maxDuration: 'max_duration',
-      tourMinPrice: 'min_price',
-      tourMaxPrice: 'max_price',
-    };
-    return map[key] || key;
-  };
 
   const doFetch = useCallback(async (f: SearchFiltersType, page: string) => {
     setLoading(true);
@@ -78,20 +75,19 @@ export default function SearchView({ type }: SearchViewProps) {
 
   const handleFilterChange = (newFilters: SearchFiltersType) => {
     const params = new URLSearchParams();
+    params.set('type', type === 'flight' ? 'flights' : type === 'hotel' ? 'hotels' : 'tours');
     Object.entries(newFilters).forEach(([key, value]) => {
       if (value !== undefined && value !== '' && key !== 'page') {
         params.set(key, String(value));
       }
     });
-    const prefix = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
-    router.replace(`${prefix}?${params.toString()}`);
+    router.replace(`/search?${params.toString()}`);
   };
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(page));
-    const prefix = type === 'flight' ? '/flights' : type === 'hotel' ? '/hotels' : '/tours';
-    router.replace(`${prefix}?${params.toString()}`);
+    router.replace(`/search?${params.toString()}`);
   };
 
   return (

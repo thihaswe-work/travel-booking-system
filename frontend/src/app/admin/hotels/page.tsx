@@ -142,7 +142,7 @@ export default function AdminHotelsPage() {
     )},
     {
       key: 'actions' as const,
-      header: 'Status' as const,
+      header: 'Actions' as const,
       render: (h: Hotel) => (
         <div onClick={(e) => e.stopPropagation()}>
           <select

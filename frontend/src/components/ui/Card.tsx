@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface CardProps {
@@ -31,10 +32,12 @@ export default function Card({
     >
       {imageUrl && (
         <div className="relative h-48 w-full overflow-hidden">
-          <img
+          <Image
             src={imageUrl}
             alt={imageAlt || title || ''}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 400px"
           />
         </div>
       )}

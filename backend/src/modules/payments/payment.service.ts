@@ -97,7 +97,7 @@ export const paymentService = {
     return payment;
   },
 
-  async getInvoice(invoiceNumber: string) {
+  async getInvoice(invoiceNumber: string, userId: string, userRole: string) {
     const payment = await prisma.payment.findUnique({
       where: { invoiceNumber },
       include: {
@@ -111,6 +111,9 @@ export const paymentService = {
     });
 
     if (!payment) throw new AppError('Invoice not found', 404, 'NOT_FOUND');
+    if (userRole !== 'admin' && payment.booking.userId !== userId) {
+      throw new AppError('Access denied', 403, 'FORBIDDEN');
+    }
 
     return {
       invoiceNumber: payment.invoiceNumber,

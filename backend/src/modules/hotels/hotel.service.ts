@@ -39,10 +39,12 @@ export async function list(filters: ListFilters, query: { page?: string; limit?:
   }
 
   const sortField = filters.sort || 'name';
-  const orderBy: Prisma.HotelOrderByWithRelationInput =
-    sortField === 'rating' ? { starRating: 'desc' } :
-    sortField === 'price' ? { starRating: 'desc' } :
-    { name: 'asc' };
+  let orderBy: Prisma.HotelOrderByWithRelationInput = { name: 'asc' };
+  if (sortField === 'rating') {
+    orderBy = { starRating: 'desc' };
+  } else if (sortField === 'price') {
+    orderBy = { pricePerNight: 'asc' };
+  }
 
   const [data, total] = await Promise.all([
     prisma.hotel.findMany({
@@ -100,10 +102,12 @@ export async function adminList(
   }
 
   const sortField = filters.sort || 'name';
-  const orderBy: Prisma.HotelOrderByWithRelationInput =
-    sortField === 'rating' ? { starRating: 'desc' } :
-    sortField === 'price' ? { starRating: 'desc' } :
-    { name: 'asc' };
+  let orderBy: Prisma.HotelOrderByWithRelationInput = { name: 'asc' };
+  if (sortField === 'rating') {
+    orderBy = { starRating: 'desc' };
+  } else if (sortField === 'price') {
+    orderBy = { pricePerNight: 'asc' };
+  }
 
   const [data, total] = await Promise.all([
     prisma.hotel.findMany({

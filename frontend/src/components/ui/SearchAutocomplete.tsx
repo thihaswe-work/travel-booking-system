@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { get } from '@/lib/api';
 import type { SearchResult, SearchResultItem, ApiResponse } from '@/types';
 import {
@@ -111,6 +111,7 @@ export default function SearchAutocomplete({
   variant = 'default',
 }: SearchAutocompleteProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -130,6 +131,19 @@ export default function SearchAutocomplete({
   useEffect(() => {
     setRecentSearches(getRecentSearches());
   }, []);
+
+  useEffect(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setQuery('');
+    setResults(null);
+    setLoading(false);
+    setError(false);
+    setOpen(false);
+    setActiveIndex(-1);
+  }, [pathname]);
 
   const doSearch = useCallback(async (q: string) => {
     if (q.trim().length < 1) {
